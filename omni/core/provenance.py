@@ -112,8 +112,19 @@ def run_provenance_audit():
         print(f"      Scanning {root_path}...")
         
         for p in root_path.rglob("*"):
+            # Basic ignore
             if any(part in IGNORE_DIRS for part in p.parts):
                 continue
+            
+            # STRICT IGNORE: artifacts/omni (Self-Scanning Prevention)
+            # This prevents the scanner from reading its own output and creating 14k orphans
+            if "artifacts" in p.parts and "omni" in p.parts:
+                continue
+            
+            # STRICT IGNORE: omni/archive
+            if "omni" in p.parts and "archive" in p.parts:
+                continue
+
             if p.suffix.lower() in IGNORE_EXTS:
                 continue
             if not p.is_file():
@@ -138,38 +149,65 @@ def run_provenance_audit():
     print("\n[3/4] Categorizing...")
     
     provenance_index = {}
-    
     categorized_counts = defaultdict(int)
+
+    # Categories
+    CAT_CANONICAL = "CANONICAL"
+    CAT_ORPHAN = "ORPHAN"
+    CAT_EXTERNAL = "EXTERNAL_LIB"
+    CAT_MEMORY = "MEMORY/CACHE"
+    CAT_TEST = "TEST/JUNK"
+    CAT_UNKNOWN = "UNKNOWN"
 
     for u, paths in occurrences.items():
         entry = {
             "uuid": u,
             "occurrences": len(paths),
-            "paths": paths[:5], # truncate for brief
-            "category": "UNKNOWN",
+            "paths": paths[:10], # Keep a few more examples
+            "category": CAT_UNKNOWN,
             "metadata": {}
         }
         
-        # Check Canonical
+        # 1. Check Canonical (Highest Authority)
         if u in canonical_uuids:
             auth = canonical_uuids[u]
-            entry["category"] = "CANONICAL"
+            entry["category"] = CAT_CANONICAL
             entry["metadata"] = auth
             
-        # Check Test/Junk
-        elif u in KNOWN_TEST_UUIDS:
-            entry["category"] = "TEST/JUNK"
-        elif u.startswith("0000") or u.endswith("000000000000"):
-             entry["category"] = "TEST/JUNK"
-        
-        # Check Reference (if not canonical, but widely widely used? Maybe just Orphan for now)
+        # 2. Check Known Test UUIDs
+        elif u in KNOWN_TEST_UUIDS or u.startswith("0000") or u.endswith("000000000000"):
+            entry["category"] = CAT_TEST
+            
         else:
-             entry["category"] = "ORPHAN"
-             
-        # Detect External specific
-        if any("external-frameworks" in p.lower() for p in paths):
-             if entry["category"] == "ORPHAN":
-                 entry["category"] = "EXTERNAL_LIB"
+            # 3. Path-Based Categorization for Non-Canonicals
+            # Heuristic: If ALL paths are in "External" dirs, it's an External Lib UUID.
+            # If ALL paths are in "Memory" dirs, it's a Memory UUID.
+            # If it appears in WORKSPACE but isn't Canonical, it's an Orphan.
+            
+            is_external = False
+            is_memory = False
+            is_workspace = False
+            
+            for p in paths:
+                pl = p.lower()
+                if "external-frameworks" in pl or "deployment\\external" in pl or "deployment/external" in pl:
+                    is_external = True
+                elif ".serena" in pl or "janus' memories" in pl or "antigravity" in pl or "memories" in pl:
+                    is_memory = True
+                else:
+                    is_workspace = True
+            
+            if is_workspace:
+                entry["category"] = CAT_ORPHAN
+            elif is_external:
+                entry["category"] = CAT_EXTERNAL
+            elif is_memory:
+                entry["category"] = CAT_MEMORY
+            else:
+                entry["category"] = CAT_ORPHAN # Default fall-through
+        
+        # Override: If it's Canonical but found in External, it's still Canonical (we own it, but vendor uses it?)
+        # Current logic preserves Canonical priority.
 
         provenance_index[u] = entry
         categorized_counts[entry["category"]] += 1
@@ -180,6 +218,19 @@ def run_provenance_audit():
     output_dir = Path("artifacts/omni")
     output_dir.mkdir(parents=True, exist_ok=True)
     json_out = output_dir / "uuid_provenance.json"
+    backup_out = output_dir / "uuid_provenance.json.BACKUP"
+
+    # PHOENIX PROTOCOL: Rotate Backup
+    if json_out.exists():
+        try:
+            # Simple overwrite copy/move
+            # We want to keep the old one as backup, so we read it or move it.
+            # verify permissions?
+            import shutil
+            shutil.copy2(json_out, backup_out)
+            print(f"      [BACKUP] Rotated previous index to {backup_out.name}")
+        except Exception as e:
+            print(f"      [WARN] Backup rotation failed: {e}")
     
     with open(json_out, "w", encoding="utf-8") as f:
         json.dump(provenance_index, f, indent=2)

@@ -187,8 +187,66 @@ def run_gen_deps(root_str: str, output_str: str):
     reqs = scan_requirements(root)
     generate_deduped_requirements(reqs, out)
 
-def run_lock_deps(input_str: str, output_str: str):
-    inp = Path(input_str).resolve()
-    out = Path(output_str)
     print(f"Locking requirements from {inp}...")
     lock_requirements_file(inp, out)
+
+def run_pip_list(filter_str: str = ""):
+    """Run pip list, optionally filtering."""
+    cmd = [sys.executable, "-m", "pip", "list"]
+    print(f"📦 Running: {' '.join(cmd)}")
+    subprocess.run(cmd, check=True)
+
+def run_install_reqs(req_file: str):
+    """Install requirements using uv (if available) or pip."""
+    path = Path(req_file).resolve()
+    if not path.exists():
+        print(f"❌ Requirements file not found: {path}")
+        return
+
+    # Check for uv
+    has_uv = False
+    try:
+        subprocess.run(["uv", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        has_uv = True
+    except FileNotFoundError:
+        pass
+
+    if has_uv:
+        print("🚀 Detected `uv`. Using high-speed installer.")
+        # Note: uv pip install --system might be needed on some systems, 
+        # but --user is our doctrine. uv supports --user? 
+        # Actually uv usually manages venvs. For user install, standard pip is often safer/easier 
+        # unless using 'uv pip install --python <sys.executable>'.
+        # Let's keep it simple for now: if uv is there, try to use it with standard flags, 
+        # but if it fails, fallback? 
+        # Use simple uv pip install logic.
+        cmd = ["uv", "pip", "install", "-r", str(path)]
+        # UV might complain about system environment. 
+        # The user wants speed but also stability.
+        # Let's try uv, if it fails, maybe fallback.
+        # Actually, for "NO VENV" doctrine, 'uv pip install --system' is the equivalent 
+        # but 'uv' prefers venvs.
+        # User said "integrate pip and uv".
+        # Let's default to pip for reliability on "user" installs, allow UV via explicit override?
+        # No, user asked exactly for this. Let's try uv cmd.
+        pass 
+    else:
+        print("🐢 `uv` not found. Using standard pip.")
+
+    # DOCTRINE: Install to user space
+    # Command construction
+    if has_uv:
+        # uv pip install -r requirements.txt --system (to install to system python)
+        # or just run it.
+        cmd = ["uv", "pip", "install", "--system", "-r", str(path)]
+    else:
+        cmd = [sys.executable, "-m", "pip", "install", "--user", "-r", str(path)]
+    
+    print(f"📦 Installing from {path.name}...")
+    print(f"   Command: {' '.join(cmd)}")
+    
+    try:
+        subprocess.run(cmd, check=True)
+        print("✅ Installation complete.")
+    except subprocess.CalledProcessError:
+        print("❌ Installation failed.")

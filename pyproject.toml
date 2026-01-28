@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omni-governance"
+version = "0.6.0"
+description = "The Federation Governance Tricorder"
+authors = [
+    {name = "Kode_Animator", email = "kode.animator@gmail.com"},
+]
+dependencies = [
+    "pyyaml",
+    "seraphina-federation>=1.0.0",
+]
+requires-python = ">=3.10"
+
+[project.urls]
+Homepage = "https://github.com/Kryssie6985/Infrastructure"
+Repository = "https://github.com/Kryssie6985/Infrastructure"
+
+[project.scripts]
+omni = "omni.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["omni", "omni.*"]

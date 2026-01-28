@@ -77,16 +77,19 @@ graph TD
     Core --> Prov[Provenance (UPI)]
     Core --> Cart[Cartographer]
     Core --> Reqs[Requirements]
+    Core --> Events[Event Scanner]
     
     Reg -- Reads --> Source[PROJECT_REGISTRY_MASTER.md]
     Prov -- Scans --> FS[Filesystem]
     Prov -- Reads --> Reg
     Cart -- Analyzes --> FS
     Reqs -- Scans --> FS
+    Events -- Scans --> FS
     
     Prov -- Generates --> Art1[artifacts/omni/uuid_provenance.json]
     Cart -- Generates --> Art2[artifacts/omni/ecosystem_map.png]
     Reqs -- Generates --> Art3[requirements.federation.txt]
+    Events -- Generates --> Art4[EVENT_REGISTRY.yaml]
 ```
 
 ## III. The Resilience Framework (Ψ)

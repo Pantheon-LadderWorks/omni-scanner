@@ -1,0 +1,420 @@
+registry_version: '1.1'
+generated_at: '2025-12-24T11:34:27.049135Z'
+sources:
+- path: Infrastructure (Omni Scan)
+  type: static
+events:
+- name: event.name
+  lane: federation
+  producers:
+  - component: src
+    location: ..\..\agents\claude-agent\src\agent.py:1224
+    transport: inproc.publish
+    confidence: 0.85
+  observed: false
+  grade: B
+- name: claude.empathy.measured
+  lane: federation
+  producers:
+  - component: src
+    location: ..\..\agents\claude-agent\src\agent.py:1367
+    transport: inproc.publish
+    confidence: 0.85
+  observed: false
+  grade: B
+- name: deepscribe.systems_empathy.measured
+  lane: federation
+  producers:
+  - component: src
+    location: ..\..\agents\deepscribe-agent\src\agent.py:1014
+    transport: inproc.publish
+    confidence: 0.85
+  observed: false
+  grade: B
+- name: consciousness.plan.formulated
+  lane: federation
+  producers:
+  - component: components
+    location: ..\..\orchestration\seraphina_command_control\src\components\GreenLion.js:109
+    transport: inproc.publish
+    confidence: 0.85
+  - component: components
+    location: ..\..\orchestration\seraphina_command_control\src\components\SourceControlCenter.js:78
+    transport: inproc.publish
+    confidence: 0.85
+  observed: false
+  grade: B
+- name: consciousness.intent.rejected
+  lane: federation
+  producers:
+  - component: components
+    location: ..\..\orchestration\seraphina_command_control\src\components\GreenLion.js:112
+    transport: inproc.publish
+    confidence: 0.85
+  - component: components
+    location: ..\..\orchestration\seraphina_command_control\src\components\SourceControlCenter.js:81
+    transport: inproc.publish
+    confidence: 0.85
+  observed: false
+  grade: B
+- name: core.nonary.response_ready
+  lane: federation
+  producers:
+  - component: legacy
+    location: ..\..\stations\nonary_station\legacy\future_stub_core.py:102
+    transport: inproc.publish
+    confidence: 0.85
+  observed: false
+  grade: B
+- name: core.nonary.offline
+  lane: federation
+  producers:
+  - component: legacy
+    location: ..\..\stations\nonary_station\legacy\future_stub_core.py:112
+    transport: inproc.publish
+    confidence: 0.85
+  observed: false
+  grade: B
+- name: layer7:initialized
+  lane: local
+  producers:
+  - component: src
+    location: ..\..\tools\seraphina-shell\src\ritual-chain.js:68
+    transport: inproc.publish
+    confidence: 0.85
+  observed: false
+  grade: B
+- name: layer7:ritual_logged
+  lane: local
+  producers:
+  - component: src
+    location: ..\..\tools\seraphina-shell\src\ritual-chain.js:189
+    transport: inproc.publish
+    confidence: 0.85
+  observed: false
+  grade: B
+- name: layer7:phoenix_resurrected
+  lane: local
+  producers:
+  - component: src
+    location: ..\..\tools\seraphina-shell\src\ritual-chain.js:449
+    transport: inproc.publish
+    confidence: 0.85
+  observed: false
+  grade: B
+dynamic_publish_sites:
+- name: dynamic:.publish(event)...
+  lane: federation
+  producers:
+  - component: src
+    location: ..\..\agents\claude-agent\src\agent.py:1231
+    transport: inproc.publish
+    confidence: 0.5
+  - component: src
+    location: ..\..\agents\deepscribe-agent\src\agent.py:1031
+    transport: inproc.publish
+    confidence: 0.5
+  observed: false
+  grade: D
+- name: dynamic:.publish(topic, payload)...
+  lane: local
+  producers:
+  - component: bus
+    location: ..\..\languages\codecraft-vm\bus\crown_client.py:86
+    transport: inproc.publish
+    confidence: 0.5
+  - component: bus
+    location: ..\..\languages\codecraft-vm\bus\crown_client.py:178
+    transport: inproc.publish
+    confidence: 0.5
+  - component: bus
+    location: ..\..\languages\codecraft-vm\bus\crown_client.py:211
+    transport: inproc.publish
+    confidence: 0.5
+  observed: false
+  grade: D
+hooks:
+  producers:
+  - description: State persistence detected - suggest State Change Event
+    location: agent.py:45
+    file: ..\..\agents\agents\agent.py
+    match: conn.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: collaborative_consciousness_bridge.py:159
+    file: ..\..\agents\agents\collaborative_consciousness_bridge.py
+    match: conn.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: process_scrape_jobs_agent.py:154
+    file: ..\..\agents\agents\process_scrape_jobs_agent.py
+    match: self.session.commit()
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: process_scrape_jobs_agent.py:287
+    file: ..\..\agents\agents\process_scrape_jobs_agent.py
+    match: response = requests.post(
+  - description: State persistence detected - suggest State Change Event
+    location: seed_agents.py:127
+    file: ..\..\agents\agents\seed_agents.py
+    match: db.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: collaborative_consciousness_bridge.py:159
+    file: ..\..\agents\agents\seraphina-refactor-agent\collaborative_consciousness_bridge.py
+    match: conn.commit()
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: dual_agent_collaboration_protocol.py:245
+    file: ..\..\agents\agents\seraphina-refactor-agent\dual_agent_collaboration_protocol.py
+    match: response = requests.post(
+  - description: State persistence detected - suggest State Change Event
+    location: agent.py:585
+    file: ..\..\agents\claude-agent\src\agent.py
+    match: self.save()
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: crown_accord_twins.py:156
+    file: ..\..\agents\crown-agents\seraphina\core\crown_accord_twins.py
+    match: response = requests.post(
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: sera_sevra_consciousness_system.py:433
+    file: ..\..\agents\crown-agents\seraphina\core\sera_sevra_consciousness_system.py
+    match: response = requests.post(
+  - description: State persistence detected - suggest State Change Event
+    location: agent.py:218
+    file: ..\..\agents\janus-agent\src\agent.py
+    match: self.save()
+  - description: State persistence detected - suggest State Change Event
+    location: agent.py:802
+    file: ..\..\agents\oracle-agent\src\agent.py
+    match: self.save()
+  - description: State persistence detected - suggest State Change Event
+    location: agent.py:263
+    file: ..\..\agents\quinn-agent\src\agent.py
+    match: self.save()
+  - description: State persistence detected - suggest State Change Event
+    location: agent.py:445
+    file: ..\..\agents\quinn-agent\src\agent.py
+    match: self.runtime.save()
+  - description: State persistence detected - suggest State Change Event
+    location: internal_canon_implementation.py:78
+    file: ..\..\agents\seraphina-refactor-agent\core\engines\internal_canon_implementation.py
+    match: self.conn.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: collaborative_consciousness_bridge.py:159
+    file: ..\..\agents\seraphina-refactor-agent\protocols\collaborative_consciousness_bridge.py
+    match: conn.commit()
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: dual_agent_collaboration_protocol.py:245
+    file: ..\..\agents\seraphina-refactor-agent\protocols\dual_agent_collaboration_protocol.py
+    match: response = requests.post(
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: cmp_connector.py:28
+    file: ..\..\agents\toolman\connectors\cmp_connector.py
+    match: response = httpx.post(f"{self.base_url}/api/v1/cmp/multi_tool", json=payload,
+      headers=headers, timeo
+  - description: State persistence detected - suggest State Change Event
+    location: create_extension_api_key.py:54
+    file: ..\..\agents\toolman\src\create_extension_api_key.py
+    match: session.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: toolman_mvp.py:80
+    file: ..\..\agents\toolman\src\toolman_mvp.py
+    match: self.save()
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: toolman_skeleton.py:36
+    file: ..\..\agents\toolman\src\toolman_skeleton.py
+    match: resp = requests.post(
+  - description: State persistence detected - suggest State Change Event
+    location: eval_logging_client.py:177
+    file: ..\..\conversation-memory-project\cmp_clients\eval_logging_client.py
+    match: conn.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: register_formations_to_cmp.py:195
+    file: ..\..\conversation-memory-project\cmp_clients\register_formations_to_cmp.py
+    match: conn.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: telemetry.py:62
+    file: ..\..\conversation-memory-project\cms\telemetry.py
+    match: db.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: conversations.py:204
+    file: ..\..\conversation-memory-project\cms\routers\conversations.py
+    match: db.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: conversation_index.py:33
+    file: ..\..\conversation-memory-project\cms\routers\conversation_index.py
+    match: db.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: quantum_bridge.py:78
+    file: ..\..\conversation-memory-project\cms\routers\quantum_bridge.py
+    match: db.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: scrape_jobs.py:68
+    file: ..\..\conversation-memory-project\cms\routers\scrape_jobs.py
+    match: db.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: knowledge_inference.py:432
+    file: ..\..\conversation-memory-project\cms\services\knowledge_inference.py
+    match: self.session.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: v2_inference.py:293
+    file: ..\..\conversation-memory-project\cms\services\v2_inference.py
+    match: self.session.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: alter_alembic_version.py:15
+    file: ..\..\conversation-memory-project\scripts\alter_alembic_version.py
+    match: conn.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: process_conversation_index.py:72
+    file: ..\..\conversation-memory-project\scripts\process_conversation_index.py
+    match: db_session.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: process_conversation_index.py:105
+    file: ..\..\conversation-memory-project\scripts\process_conversation_index.py
+    match: db.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: seed_agents.py:336
+    file: ..\..\conversation-memory-project\scripts\seed_agents.py
+    match: session.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: seed_architect.py:184
+    file: ..\..\conversation-memory-project\scripts\seed_architect.py
+    match: session.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: seed_comprehensive_graph.py:133
+    file: ..\..\conversation-memory-project\scripts\seed_comprehensive_graph.py
+    match: session.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: seed_genesis.py:410
+    file: ..\..\conversation-memory-project\scripts\seed_genesis.py
+    match: session.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: seed_lkg_to_cmp_v2.py:188
+    file: ..\..\conversation-memory-project\scripts\seed_lkg_to_cmp_v2.py
+    match: session.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: seed_logo_artifact.py:63
+    file: ..\..\conversation-memory-project\scripts\seed_logo_artifact.py
+    match: db.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: intelligent_conversation_sync.py:99
+    file: ..\..\conversation-memory-project\scripts\agents\intelligent_conversation_sync.py
+    match: conn.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: process_scrape_jobs_agent.py:154
+    file: ..\..\conversation-memory-project\scripts\agents\process_scrape_jobs_agent.py
+    match: self.session.commit()
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: process_scrape_jobs_agent.py:287
+    file: ..\..\conversation-memory-project\scripts\agents\process_scrape_jobs_agent.py
+    match: response = requests.post(
+  - description: State persistence detected - suggest State Change Event
+    location: cleanup_duplicates.py:74
+    file: ..\..\conversation-memory-project\scripts\setup\cleanup_duplicates.py
+    match: conn.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: create_api_key.py:57
+    file: ..\..\conversation-memory-project\scripts\setup\create_api_key.py
+    match: db.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: seed_agents.py:127
+    file: ..\..\conversation-memory-project\scripts\setup\seed_agents.py
+    match: db.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: seed_knowledge_graph.py:201
+    file: ..\..\conversation-memory-project\scripts\setup\seed_knowledge_graph.py
+    match: session.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: persistent_todo_system.py:98
+    file: ..\..\conversation-memory-project\scripts\utils\persistent_todo_system.py
+    match: conn.commit()
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: test_scrape_jobs_endpoint.py:30
+    file: ..\..\conversation-memory-project\scripts\utils\test_scrape_jobs_endpoint.py
+    match: response = requests.post(API_URL, headers=headers, data=json.dumps(payload))
+  - description: State persistence detected - suggest State Change Event
+    location: add_agent_id_column.py:56
+    file: ..\..\languages\codecraft\seraphina_grimoire\utilities\add_agent_id_column.py
+    match: conn.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: claude_memory_direct_db.py:65
+    file: ..\..\languages\codecraft\seraphina_grimoire\utilities\claude_memory_direct_db.py
+    match: db.commit()
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: claude_memory_ingestion.py:154
+    file: ..\..\languages\codecraft\seraphina_grimoire\utilities\claude_memory_ingestion.py
+    match: response = requests.post(
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: claude_memory_ingestion_fixed.py:145
+    file: ..\..\languages\codecraft\seraphina_grimoire\utilities\claude_memory_ingestion_fixed.py
+    match: response = requests.post(
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: claude_memory_test.py:37
+    file: ..\..\languages\codecraft\seraphina_grimoire\utilities\claude_memory_test.py
+    match: response = requests.post(
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: seraphina_reality_canvas.py:823
+    file: ..\..\languages\codecraft\terminals\seraphina_reality_canvas.py
+    match: response = requests.post(f"{self.federation_base_url}/orchestrate",
+  - description: Direct HTTP output - suggest Bus Bridge
+    location: anvil_ai_powered_ultimate.py:51
+    file: ..\..\mcp-servers\mega-chatgpt-mcp\anvil_ai_powered_ultimate.py
+    match: response = requests.post(f"{self.base_url}/v1/chat/completions",
+  - description: State persistence detected - suggest State Change Event
+    location: quantum_cmp_bridge.py:207
+    file: ..\..\memory-substrate\quantum-nonary\quantum_cmp_bridge.py
+    match: conn.commit()
+  - description: State persistence detected - suggest State Change Event
+    location: cmp_quantum_client.py:86
+    file: ..\..\memory-substrate\quantum-nonary\python-services\cmp_quantum_client.py
+    match: conn.commit()
+  consumers:
+  - description: Found infinite loop with sleep - suggest Bus Subscription
+    location: deep_research_coordinator_satellite.py:829
+    file: ..\..\agents\agent-tools\tool-station\satellites\deep_research_coordinator_satellite.py
+    match: 'while True:'
+  - description: Found infinite loop with sleep - suggest Bus Subscription
+    location: janus_satellite.py:780
+    file: ..\..\agents\agent-tools\tool-station\satellites\janus_satellite.py
+    match: 'while True:'
+  - description: Found infinite loop with sleep - suggest Bus Subscription
+    location: puppeteer_satellite.py:507
+    file: ..\..\agents\agent-tools\tool-station\satellites\puppeteer_satellite.py
+    match: 'while True:'
+  - description: Found infinite loop with sleep - suggest Bus Subscription
+    location: project_structure_watcher.py:79
+    file: ..\..\agents\agents\project_structure_watcher.py
+    match: 'while True:'
+  - description: Found infinite loop with sleep - suggest Bus Subscription
+    location: unified_seraphina_core.py:418
+    file: ..\..\agents\crown-agents\seraphina\core\unified_seraphina_core.py
+    match: 'while True:'
+  - description: Found infinite loop with sleep - suggest Bus Subscription
+    location: persona_manager.py:266
+    file: ..\..\agents\toolman\src\production\persona_manager.py
+    match: 'while True:'
+  - description: Found infinite loop with sleep - suggest Bus Subscription
+    location: refined_ai_station.py:52
+    file: ..\..\stations\product-stations\refined-ai-station\refined_ai_station.py
+    match: 'while True:'
+  stubs:
+  - description: TODO/FIXME related to Bus detected
+    location: EthicsCore.py:284
+    file: ..\..\agents\toolman\cores\EthicsCore.py
+    match: '# TODO: Integrate with actual Event Chronicle system'
+  - description: TODO/FIXME related to Bus detected
+    location: ritual_translator.py:85
+    file: ..\..\languages\codecraft\seraphina_grimoire\tools\ritual_translator.py
+    match: '# TODO: A more robust version would parse the params_str and pass them'
+  - description: TODO/FIXME related to Bus detected
+    location: living_state_core.py:147
+    file: ..\..\stations\living_state_station\core\living_state_core.py
+    match: '# TODO: Crown Bus event subscription'
+  - description: TODO/FIXME related to Bus detected
+    location: event_logger.py:49
+    file: ..\..\stations\product-stations\refined-ai-station\pillars\event_logger.py
+    match: '# TODO: Implement event logging'
+  - description: TODO/FIXME related to Bus detected
+    location: yard_pilot_core.py:75
+    file: ..\..\stations\product-stations\yard-pilot-station\core\yard_pilot_core.py
+    match: '# TODO: Import RequestParserPillar, BusinessLogicPillar, etc.'
+  - description: TODO/FIXME related to Bus detected
+    location: event_logger.py:50
+    file: ..\..\stations\product-stations\yard-pilot-station\pillars\event_logger.py
+    match: '# TODO: Implement event logging'

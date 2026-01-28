@@ -15,6 +15,8 @@
 - [x] Integrate Requirements Scanner.
 
 ## Done ✅
+- [x] Implement Event Surface Scanner (Pass A: Static + Registry).
+- [x] Implement Runtime Tap (CrownBusTap).
 - [x] Refactor Registry to V2 (Identity + Facets).
 - [x] Migrate `audit_provenance.py`.
 - [x] Migrate `render_registry.py`.

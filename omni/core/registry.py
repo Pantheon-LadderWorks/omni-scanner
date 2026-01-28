@@ -2,7 +2,7 @@ import os
 import yaml
 
 # Configuration (Migrated from surface_scanner.py)
-REGISTRY_PATH = r"C:\Users\kryst\Infrastructure\PROJECT_REGISTRY.md"
+REGISTRY_PATH = r"C:\Users\kryst\Infrastructure\PROJECT_REGISTRY_MASTER.md"
 PANTHEON_REGISTRY_PATH = r"C:\Users\kryst\Infrastructure\conversation-memory-project\PANTHEON_PROJECT_REGISTRY.final.yaml"
 WORKSPACE_ROOT = r"C:\Users\kryst"
 

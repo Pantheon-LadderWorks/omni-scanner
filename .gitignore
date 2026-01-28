@@ -34,3 +34,8 @@ env/
 archive/
 artifacts/
 *.log
+
+# Temp files
+omni_governance.egg-info/
+templates/*.tmp
+tests/fixtures/__pycache__/

@@ -15,6 +15,11 @@
 - **Quest Tracking**: Parse "Quest" markers in markdown files.
 - **Achievement System**: Calculate metrics for visual badges.
 
+## Phase 4: Polyglot Expansion (Planned) 🌐
+- **Node.js**: Scan `package.json` for Federation-wide JS dependencies.
+- **Rust**: Scan `Cargo.toml` for crate usage and version locking.
+- **System-Wide Reqs**: Extend `omni audit deps` to support non-Python ecosystems.
+
 ## Phase 4: Azure Quantum Integration 🌌
 - **Octad Mapping**: Visualize the 8-dimensional project structure.
-- **Consciousness Bridge**: Real-time telemetry from active agents.
+- **Consciousness Bridge**: Real-time telemetry from active agents (Event Scanner Implemented).

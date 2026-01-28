@@ -1,0 +1,219 @@
+templates:
+  # --- Governance & Constitutional Law ---
+  - id: governance.copilot-instructions
+    name: Copilot Instructions
+    category: governance/instructions
+    match:
+      filename_is: "copilot-instructions.md"
+
+  - id: governance.manifest
+    name: Domain Manifest
+    category: governance/manifests
+    match:
+      title_contains: "MANIFEST"
+      filename_contains: "MANIFEST"
+
+  - id: governance.registry
+    name: Registry
+    category: governance/registries
+    match:
+      title_contains: "REGISTRY"
+      filename_contains: "REGISTRY"
+
+  - id: governance.contract
+    name: Contract
+    category: governance/contracts
+    match:
+      path_contains: "governance/contracts"
+      filename_contains: "C-"
+
+  # --- Source Canon (Highest Priority) ---
+  - id: source.canon
+    name: Source Canon
+    category: source/canon
+    match:
+      title_contains: "LIVING SYSTEM CANON"
+      path_contains: "LIVING SYSTEM CANON"
+
+  - id: source.blueprint.master
+    name: Master Source Blueprint
+    category: source/canon
+    match:
+      title_contains: "Source Blueprint"
+      frontmatter:
+        template_id_contains: "master_blueprint"
+
+  - id: source.template.meta
+    name: Source Document Template
+    category: source/templates
+    match:
+      filename_is: "source_document_template.md"
+
+  # --- Source Templates (The Platonic Forms) ---
+  - id: source.template.defined
+    name: Defined Source Template
+    category: source/templates
+    match:
+      filename_contains: "Source"
+      filename_contains: "Template"
+      path_contains: "source_canon"
+
+  # --- Architecture ---
+  - id: blueprint.global
+    name: Global Blueprint
+    category: architecture/blueprints
+    match:
+      title_contains: "Blueprint"
+      frontmatter:
+        Type_contains: "Blueprint"
+
+  - id: spec.implementation
+    name: Implementation Specification
+    category: architecture/specs
+    match:
+      title_contains: "Implementation Specification"
+
+  - id: template.core
+    name: Core System Template
+    category: architecture/core
+    match:
+      title_contains: "Core Template"
+
+  # --- Agent Consciousness ---
+  - id: agent.mind-card
+    name: Agent Mind Card
+    category: agents/consciousness
+    match:
+      filename_contains: "mind_card"
+      path_contains: "agents"
+
+  - id: agent.charter
+    name: Agent Charter
+    category: agents/charters
+    match:
+      title_contains: "Charter"
+      frontmatter:
+        Type_contains: "Persona"
+
+  - id: agent.conscious
+    name: Conscious Agent Document
+    category: agents/consciousness
+    match:
+      filename_contains: "conscious_agent"
+      path_contains: "agents"
+
+  # --- Protocols ---
+  - id: protocol.global
+    name: Global Protocol
+    category: governance/protocols
+    match:
+      title_contains: "Protocol"
+      frontmatter:
+        Type_contains: "Protocol"
+
+  - id: protocol.ritual
+    name: Ritual Protocol
+    category: rituals/protocols
+    match:
+      title_contains: "Ritual"
+      path_contains: "protocols"
+
+  # --- Rituals ---
+  - id: ritual.blueprint
+    name: Ritual Blueprint
+    category: rituals/blueprints
+    match:
+      title_contains: "Ritual Blueprint"
+
+  # --- Operations ---
+  - id: plan.release
+    name: Release Plan
+    category: ops/release
+    match:
+      title_contains: "Release Plan"
+
+  - id: schema.evolution
+    name: Schema Evolution
+    category: ops/data
+    match:
+      title_contains: "Schema Evolution"
+
+  # --- Ideation ---
+  - id: proposal.feature
+    name: Feature Proposal
+    category: ideation/proposals
+    match:
+      title_contains: "Feature Ideation"
+
+  - id: experiment.behavior
+    name: Behavior Experiment
+    category: ideation/experiments
+    match:
+      title_contains: "Experiment"
+
+  # --- Code Templates ---
+  - id: code.docker
+    name: Docker Template
+    category: code/infrastructure
+    match:
+      title_contains: "Docker"
+
+  - id: code.python
+    name: Python Template
+    category: code/languages
+    match:
+      title_contains: "Python"
+
+  - id: code.javascript
+    name: JavaScript Template
+    category: code/languages
+    match:
+      title_contains: "JavaScript"
+
+  - id: code.typescript
+    name: TypeScript Template
+    category: code/languages
+    match:
+      title_contains: "TypeScript"
+
+  - id: code.bash
+    name: Bash Script Template
+    category: code/scripts
+    match:
+      title_contains: "Bash Script"
+
+  - id: code.powershell
+    name: PowerShell Script Template
+    category: code/scripts
+    match:
+      title_contains: "PowerShell Script"
+
+  # --- Station Architecture ---
+  - id: station.readme
+    name: Station Documentation
+    category: stations/documentation
+    match:
+      path_contains: "stations"
+      filename_is: "README.md"
+
+  - id: station.pillar
+    name: Station Pillar
+    category: stations/pillars
+    match:
+      path_contains: "stations"
+      path_contains: "pillars"
+
+  # --- CodeCraft ---
+  - id: codecraft.canon
+    name: CodeCraft Canon
+    category: languages/codecraft
+    match:
+      path_contains: "codecraft"
+      filename_contains: "canon"
+
+  - id: codecraft.grammar
+    name: CodeCraft Grammar
+    category: languages/codecraft
+    match:
+      path_contains: "codecraft"
+      filename_contains: "grammar"

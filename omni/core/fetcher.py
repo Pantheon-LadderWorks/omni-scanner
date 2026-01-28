@@ -8,16 +8,45 @@ import psycopg2
 from typing import Dict, List
 
 # Connection settings
-DB_CONFIG = {
-    "dbname": os.getenv("CMS_DB_NAME", "cms_db"),
-    "user": os.getenv("CMS_DB_USER", "postgres"),
-    "password": os.getenv("CMS_DB_PASSWORD", "password"),
-    "host": os.getenv("CMS_DB_HOST", "localhost"),
-    "port": os.getenv("CMS_DB_PORT", "5433")
-}
+# Load .env ONLY when fetch_canonical_uuids() is called
+from pathlib import Path
+
+# Paths
+CMP_PATH = Path(r"C:\Users\kryst\Infrastructure\conversation-memory-project")
+CMP_ENV_PATH = CMP_PATH / ".env"
+
+# Lazy .env loading - only happens inside fetch_canonical_uuids()
+_ENV_LOADED = False
+
+def _ensure_env_loaded():
+    """Load CMP .env only when actually needed for DB operations."""
+    global _ENV_LOADED
+    if not _ENV_LOADED:
+        try:
+            from dotenv import load_dotenv
+            if CMP_ENV_PATH.exists():
+                load_dotenv(CMP_ENV_PATH)
+                # Removed DEBUG print - no noise unless scanning CMP
+            _ENV_LOADED = True
+        except ImportError:
+            pass  # dotenv optional
+
+def _get_db_config():
+    """Get DB config after ensuring env is loaded."""
+    _ensure_env_loaded()
+    return {
+        "dbname": os.getenv("POSTGRES_DB", "cms_db"),
+        "user": os.getenv("POSTGRES_USER", "postgres"),
+        "password": os.getenv("POSTGRES_PASSWORD", "password"),
+        "host": os.getenv("DB_HOST", "localhost"),
+        "port": os.getenv("DB_PORT", "5433")
+    }
 
 def fetch_canonical_uuids() -> Dict[str, Dict]:
-    print("Connecting to CMS Database...")
+    """Fetch UUIDs from CMP database. Loads .env on first call."""
+    DB_CONFIG = _get_db_config()  # Lazy load env
+    print(f"Connecting to CMS Database at {DB_CONFIG['host']}:{DB_CONFIG['port']} as {DB_CONFIG['user']}...")
+    # print(f"DEBUG: Password len: {len(DB_CONFIG['password'])}")
     conn = None
     canonical_data = {}
     

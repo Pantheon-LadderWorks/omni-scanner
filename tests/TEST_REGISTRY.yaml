@@ -1,0 +1,38 @@
+registry_version: '1.0'
+generated_at: '2025-12-24T02:05:27.641680Z'
+sources:
+- path: Infrastructure (Omni Scan)
+  type: static
+events:
+- name: user.created
+  lane: local
+  producers:
+  - component: fixtures
+    location: omni\tests\fixtures\dummy_events.py:5
+    transport: unknown
+    confidence: 0.0
+  observed: false
+- name: state
+  lane: local
+  producers:
+  - component: fixtures
+    location: omni\tests\fixtures\dummy_events.py:13
+    transport: unknown
+    confidence: 0.0
+  observed: false
+- name: payment.success
+  lane: local
+  producers:
+  - component: fixtures
+    location: omni\tests\fixtures\dummy_events.py:6
+    transport: unknown
+    confidence: 0.0
+  observed: false
+- name: crown://seraphina/core/emotion/state
+  lane: local
+  producers:
+  - component: fixtures
+    location: omni\tests\fixtures\dummy_events.py:12
+    transport: unknown
+    confidence: 0.0
+  observed: false

@@ -2,53 +2,55 @@ import os
 import re
 from pathlib import Path
 
-# --- CONFIGURATION (Ported from surface_scanner.py) ---
+from omni.core import config
+from omni.core.paths import should_skip_path
 
+# --- CONFIGURATION ---
+# Load from config or fall back to defaults
+conf = config.load_config()
+scan_conf = conf.get("scan", {})
 GLOBAL_EXCLUDES = {
-    "dirs": [
-        "node_modules", ".git", ".venv", "venv", "env", "site-packages", 
-        "dist", "build", "__pycache__", ".pytest_cache", ".mypy_cache", 
-        ".next", ".swc", "out", "android", "ios", ".firebase", ".expo", 
-        ".idea", ".vscode", "coverage"
-    ],
+    "dirs": scan_conf.get("exclude", []),
     "phrases": [
         "site-packages", 
         "superseded",
-        "backup",
+        "backup", 
         "deprecated",
         "_old",
         "dungeon-map-mlp", 
-        "sw.js" 
+        "sw.js",
+        "governance/registry/surfaces",  # Don't scan previous scan results!
+        "omni/artifacts"  # Don't scan Omni's own output
     ]
 }
 
 CONTRACT_FAMILIES = {
     "mcp": {
-        "ref": r"C:\Users\kryst\Infrastructure\contracts\mcp\C-MCP-BASE-001.md",
+        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\mcp\C-MCP-BASE-001.md",
         "status": "partial" 
     },
     "http": {
-        "ref": r"C:\Users\kryst\Infrastructure\contracts\http\C-HTTP-BASE-001.md",
+        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\http\C-HTTP-BASE-001.md",
         "status": "partial" 
     },
     "cli": {
-        "ref": r"C:\Users\kryst\Infrastructure\contracts\cli\C-CLI-BASE-001.md",
+        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\cli\C-CLI-BASE-001.md",
         "status": "partial"
     },
     "bus_topic": {
-        "ref": r"C:\Users\kryst\Infrastructure\contracts\system\C-SYS-BUS-001_Quadruplet_Crown_Bus.md",
+        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\system\C-SYS-BUS-001_Quadruplet_Crown_Bus.md",
         "status": "partial"
     },
     "db": {
-        "ref": r"C:\Users\kryst\Infrastructure\contracts\db\C-DB-BASE-001.md",
+        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\db\C-DB-BASE-001.md",
         "status": "partial"
     },
     "doc": { 
-        "ref": r"C:\Users\kryst\Infrastructure\contracts\artifacts\C-ARTIFACT-BASE-001.md",
+        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\artifacts\C-ARTIFACT-BASE-001.md",
         "status": "partial"
     },
     "ui_integration": {
-        "ref": r"C:\Users\kryst\Infrastructure\contracts\ui\C-UI-BASE-001.md",
+        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\ui\C-UI-BASE-001.md",
         "status": "partial"
     }
 }
@@ -97,7 +99,7 @@ def check_project_contracts(project_path_str: str):
     
     # SYSTEM CONTRACT CHECK (Hardcoded known system paths map to projects)
     if "orchestration" in project_path_str.lower():
-         if os.path.exists(r"C:\Users\kryst\Infrastructure\contracts\system\C-SYS-ORCH-001_UCOE_Core.md"):
+         if os.path.exists(r"C:\Users\kryst\Infrastructure\governance\contracts\system\C-SYS-ORCH-001_UCOE_Core.md"):
              contracts["system_contract"] = True
     
     if os.path.exists(project_path_str):
@@ -119,15 +121,26 @@ def scan(target: Path) -> dict:
     """
     found_surfaces = []
     
+    # Resolve target and surface root
+    target_path = Path(target).resolve()
+    surface_root = target_path if target_path.is_dir() else target_path.parent
+    
     # Project Info Inference (Simulated for single project scan)
-    project_name = target.name
-    project_path_str = str(target.absolute())
+    project_name = surface_root.name
+    project_path_str = str(surface_root.absolute())
     
     # Check Contracts
     contract_meta = check_project_contracts(project_path_str)
     
     # Walk
-    for root, dirs, files in os.walk(target):
+    for root, dirs, files in os.walk(surface_root):
+        root_path = Path(root)
+        
+        # Skip paths using federation cartography
+        if should_skip_path(root_path):
+            dirs[:] = []  # Don't descend
+            continue
+            
         # Excludes
         dirs[:] = [d for d in dirs if d not in GLOBAL_EXCLUDES['dirs'] and not d.startswith('.')]
         
@@ -205,7 +218,87 @@ def scan(target: Path) -> dict:
             except Exception:
                 pass
 
+    # Semantic Organization
+    organized = _organize_surfaces(found_surfaces)
+    
     return {
         "count": len(found_surfaces),
-        "items": found_surfaces
+        "items": found_surfaces,
+        "organized": organized
+    }
+
+
+def _organize_surfaces(surfaces: list) -> dict:
+    """
+    Semantically organize surfaces for human comprehension.
+    
+    Groups by:
+    - Kind (MCP, HTTP, CLI, DB, Bus, UI, Doc)
+    - Component/Module
+    - Status (missing, partial, exists)
+    - Contract Family
+    """
+    by_kind = {}
+    by_component = {}
+    by_status = {"missing": [], "partial": [], "exists": []}
+    by_contract = {}
+    
+    for surf in surfaces:
+        kind = surf["kind"]
+        location = surf["location"]
+        status = surf["status"]
+        contract_ref = surf.get("ref")
+        
+        # Extract component from location (file:line -> file)
+        component = location.split(":")[0].replace(".py", "").replace(".js", "").replace(".ts", "")
+        
+        # Group by kind
+        if kind not in by_kind:
+            by_kind[kind] = []
+        by_kind[kind].append(surf)
+        
+        # Group by component
+        if component not in by_component:
+            by_component[component] = []
+        by_component[component].append(surf)
+        
+        # Group by status
+        by_status[status].append(surf)
+        
+        # Group by contract family
+        if contract_ref:
+            contract_name = contract_ref.split("\\")[-1].replace(".md", "") if "\\" in contract_ref else "unknown"
+            if contract_name not in by_contract:
+                by_contract[contract_name] = []
+            by_contract[contract_name].append(surf)
+    
+    # Generate summary statistics
+    kind_stats = {k: len(v) for k, v in by_kind.items()}
+    component_stats = {k: len(v) for k, v in sorted(by_component.items(), key=lambda x: -len(x[1]))[:20]}  # Top 20 components
+    status_stats = {k: len(v) for k, v in by_status.items()}
+    contract_stats = {k: len(v) for k, v in by_contract.items()}
+    
+    return {
+        "by_kind": {
+            "summary": kind_stats,
+            "details": by_kind
+        },
+        "by_component": {
+            "summary": component_stats,
+            "details": by_component
+        },
+        "by_status": {
+            "summary": status_stats,
+            "details": by_status
+        },
+        "by_contract": {
+            "summary": contract_stats,
+            "details": by_contract
+        },
+        "insights": {
+            "total_components": len(by_component),
+            "most_surfaced_component": max(by_component.items(), key=lambda x: len(x[1]))[0] if by_component else None,
+            "coverage_ratio": round(status_stats["exists"] / (status_stats["exists"] + status_stats["partial"] + status_stats["missing"]) * 100, 1) if surfaces else 0,
+            "top_5_components": [k for k, v in sorted(by_component.items(), key=lambda x: -len(x[1]))[:5]]
+        }
     }
