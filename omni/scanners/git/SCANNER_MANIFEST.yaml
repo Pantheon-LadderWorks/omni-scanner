@@ -1,0 +1,17 @@
+category: git
+description: "Git repository and status scanners"
+scanners:
+  - name: git
+    file: git.py
+    function: scan
+    description: "Git status and repository scanner"
+  
+  - name: velocity
+    file: velocity.py
+    function: scan
+    description: "Git velocity measurement (EMERGENCE AT VELOCITY metrics)"
+  
+  - name: commit-history
+    file: commit_history.py
+    function: scan
+    description: "Complete commit history phoenix resurrection evidence"

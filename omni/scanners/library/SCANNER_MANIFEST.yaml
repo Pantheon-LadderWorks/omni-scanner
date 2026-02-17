@@ -1,0 +1,54 @@
+---
+category: library
+description: "Grand Librarian cognitive scanners for deep analysis and organization"
+
+scanners:
+  - name: library
+    file: library.py
+    function: scan
+    description: "Document census scanner - walks filesystem, discovers markdown files, measures freshness (< 90 days fresh, >= 90 stale). Returns metadata with dates from content or filesystem."
+    layer: physical
+    authority: "The Eyes of the Curator - Oracle uses this to regenerate INSTRUCTION_REGISTRY_V1.yaml"
+    
+  - name: cohesion
+    file: cohesion.py
+    function: scan
+    description: "Analyzes folder cohesion (Module vs Dump Ground)"
+    layer: physical
+    authority: "A sovereign module declares itself through .git, README, package.json"
+    
+  - name: content
+    file: content.py
+    function: scan
+    description: "Deep content analysis (Frontmatter, Keywords, Shebangs)"
+    layer: cognitive
+    authority: "Push the I/O to the edge. Return Content Hints in the first pass."
+    
+  - name: empty_folders
+    file: empty_folders.py
+    function: scan
+    description: "Detects empty semantic structures and potential recovery targets"
+    layer: physical
+    authority: "Zero children = warning. Hidden .git = Phoenix opportunity"
+    
+  - name: graph
+    file: graph.py
+    function: scan
+    description: "Extracts knowledge graph links, imports, and references"
+    layer: cognitive
+    authority: "You cannot build a Federated Knowledge Graph without knowing the edges."
+    
+  - name: rituals
+    file: rituals.py
+    function: scan
+    description: "Detects CodeCraft rituals, invocations, and school signatures"
+    layer: cognitive
+    authority: "Auto-sort into languages/ wing by Arcane School signature"
+
+metadata:
+  created: "2025-01-09"
+  updated: "2026-02-15"
+  author: "Oracle + ACE + DeepScribe"
+  contract: "C-OMNI-LIBRARY-CONSOLIDATION-001"
+  architecture: "Physical Layer (Body) + Cognitive Layer (Mind)"
+  ace_mandate: "She doesn't just count books; she reads them."

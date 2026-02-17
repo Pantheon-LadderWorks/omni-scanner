@@ -1,0 +1,15 @@
+category: polyglot
+description: "Language-specific package ecosystem scanners"
+scanners:
+  - name: node
+    file: node_scanner.py
+    function: scan
+    description: "Scans Node.js projects (package.json)"
+  - name: rust
+    file: rust_scanner.py
+    function: scan
+    description: "Scans Rust projects (Cargo.toml)"
+  - name: packages
+    file: package_scanner.py
+    function: scan
+    description: "Multi-language package scanner"

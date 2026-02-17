@@ -1,24 +1,62 @@
 import os
 import yaml
+from pathlib import Path
+from omni.config import settings
 
-# Configuration (Migrated from surface_scanner.py)
-REGISTRY_PATH = r"C:\Users\kryst\Infrastructure\PROJECT_REGISTRY_MASTER.md"
-PANTHEON_REGISTRY_PATH = r"C:\Users\kryst\Infrastructure\conversation-memory-project\PANTHEON_PROJECT_REGISTRY.final.yaml"
-WORKSPACE_ROOT = r"C:\Users\kryst"
+def parse_registry(include_virtual=False):
+    """
+    Parse canonical PROJECT_REGISTRY_V1.yaml.
+    
+    Args:
+        include_virtual: If True, include virtual projects (no local paths).
+                        Default False for backward compatibility.
+    
+    Returns:
+        List of project dicts for consumers (like cli.py).
+    """
+    registry_path = settings.get_project_registry_path()
+    
+    if not registry_path.exists():
+        return []
 
-def parse_registry():
-    projects_md = _parse_md_registry(REGISTRY_PATH)
-    projects_yaml = _parse_pantheon_registry(PANTHEON_REGISTRY_PATH)
-    
-    projects_map = {}
-    for p in projects_md + projects_yaml:
-        norm_path = os.path.normpath(p['path'].lower())
-        if norm_path not in projects_map:
-             projects_map[norm_path] = p
-    
-    return list(projects_map.values())
+    try:
+        with open(registry_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+            
+        projects = []
+        for p in data.get('projects', []):
+            local_paths = p.get('local_paths', [])
+            
+            # Skip virtual projects unless explicitly included
+            if not local_paths and not include_virtual:
+                continue
+                
+            # For physical projects, extract primary path
+            # For virtual projects, path is None
+            primary_path = local_paths[0] if local_paths else None
+            
+            projects.append({
+                "name": p.get('name', ''),
+                "display_name": p.get('display_name', ''),
+                "path": primary_path,
+                "uuid": p.get('uuid'),
+                "type": p.get('classification', 'unknown'),
+                "github_url": p.get('github_url'),
+                "status": p.get('status', 'unknown'),
+                "origin": p.get('origin', 'unknown'),
+                "local_paths": local_paths,
+                "domain": p.get('domain'),
+                "visibility": p.get('visibility')
+            })
+            
+        return projects
+        
+    except Exception as e:
+        print(f"❌ Failed to parse registry: {e}")
+        return []
 
 def _parse_md_registry(registry_path):
+    """Legacy MD Parser (Maintained for bootstrapping builder)."""
     projects = []
     if not os.path.exists(registry_path):
         return projects
@@ -27,6 +65,9 @@ def _parse_md_registry(registry_path):
         lines = f.readlines()
 
     current_section = ""
+    # Assuming standard infrastructure root if settings unavailable (legacy mode)
+    workspace_root = r"C:\Users\kryst" 
+    
     for line in lines:
         if line.startswith("##"):
             current_section = line.strip().replace("#", "").strip()
@@ -41,18 +82,7 @@ def _parse_md_registry(registry_path):
                 path_raw = parts[3].strip("`")
                 if "{" in path_raw: continue
                 
-                full_path = os.path.join(WORKSPACE_ROOT, current_section.split(" ")[0] if current_section else "Infrastructure", path_raw)
-                
-                if "Infrastructure" in registry_path and not os.path.isabs(path_raw):
-                     candidates = [
-                         os.path.join(r"C:\Users\kryst\Infrastructure", path_raw),
-                         os.path.join(r"C:\Users\kryst\Deployment", path_raw),
-                         os.path.join(r"C:\Users\kryst\Workspace", path_raw),
-                     ]
-                     for c in candidates:
-                         if os.path.exists(c):
-                             full_path = c
-                             break
+                full_path = os.path.join(workspace_root, current_section.split(" ")[0] if current_section else "Infrastructure", path_raw)
                 
                 # Extract UUID (Col 2)
                 uuid_str = parts[2].strip("` ")
@@ -67,35 +97,20 @@ def _parse_md_registry(registry_path):
                 })
     return projects
 
-def _parse_pantheon_registry(registry_path):
-    projects = []
-    if not os.path.exists(registry_path):
-        return projects
-
-    try:
-        with open(registry_path, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-            
-        for proj in data.get('projects', []):
-            if proj.get('status') != 'active': continue
-            local_paths = proj.get('local_paths', [])
-            if not local_paths: continue
-            
-            # YAML doesn't have UUIDs yet, but checking if they appear
-            uuid_str = proj.get('uuid')
-            
-            for path in local_paths:
-                full_path = path
-                if not os.path.isabs(full_path):
-                     full_path = os.path.join(WORKSPACE_ROOT, path)
-
-                projects.append({
-                    "name": proj['display_name'],
-                    "path": full_path,
-                    "type": proj.get('classification', 'unknown'),
-                    "uuid": uuid_str
-                })
-    except Exception:
-        pass
-        
-    return projects
+def parse_master_registry_md(registry_path):
+    """
+    Parse master registry to extract legacy UUIDs.
+    Returns dict of { 'github:owner/repo': 'uuid-string' }
+    """
+    legacy_map = {}
+    projects = _parse_md_registry(registry_path)
+    
+    for p in projects:
+        if p.get('uuid'):
+            # Convert path to project_key format
+            # This is approximate - real matching is in identity_engine
+            name = p.get('name', '').lower().replace(' ', '-')
+            key = f"github:kryssie6985/{name}"
+            legacy_map[key] = p['uuid']
+    
+    return legacy_map

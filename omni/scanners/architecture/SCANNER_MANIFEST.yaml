@@ -1,0 +1,7 @@
+category: architecture
+description: "Structural enforcement scanners - import boundaries, pillar compliance"
+scanners:
+  - name: imports
+    file: imports.py
+    function: scan
+    description: "Scans for import boundary violations (pillar bypass, cross-area)"

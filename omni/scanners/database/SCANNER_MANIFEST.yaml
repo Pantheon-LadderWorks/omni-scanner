@@ -1,0 +1,68 @@
+category: database
+description: "Database scanners - hybrid backend/SQL approach for CMP entities"
+scanners:
+  - name: cmp_projects
+    file: cmp_projects.py
+    function: scan
+    description: "Scans projects table (hybrid backend/SQL)"
+    
+  - name: cmp_agents
+    file: cmp_agents.py
+    function: scan
+    description: "Scans agents table (hybrid backend/SQL)"
+    
+  - name: cmp_conversations
+    file: cmp_conversations.py
+    function: scan
+    description: "Scans conversations table (hybrid backend/SQL)"
+    parameters:
+      - name: project_id
+        type: str
+        optional: true
+        description: "Filter by project UUID"
+      - name: limit
+        type: int
+        optional: true
+        default: 100
+        description: "Maximum conversations to return"
+    
+  - name: cmp_artifacts
+    file: cmp_artifacts.py
+    function: scan
+    description: "Scans artifacts table (hybrid backend/SQL)"
+    parameters:
+      - name: conversation_id
+        type: str
+        optional: true
+        description: "Filter by conversation UUID"
+      - name: limit
+        type: int
+        optional: true
+        default: 100
+        description: "Maximum artifacts to return"
+    
+  - name: cmp_entities
+    file: cmp_entities.py
+    function: scan
+    description: "Scans entity_mentions table (knowledge graph)"
+    parameters:
+      - name: entity_type
+        type: str
+        optional: true
+        description: "Filter by entity type (AGENT, PROJECT, STATION, etc.)"
+      - name: limit
+        type: int
+        optional: true
+        default: 100
+        description: "Maximum entities to return"
+
+notes: |
+  Database scanners use a hybrid approach:
+  1. Try FastAPI backend first (http://127.0.0.1:8000)
+  2. Fall back to direct PostgreSQL if backend is down
+  
+  Uses federation_heart for:
+  - Path resolution (CartographyPillar)
+  - Environment resolution (ConstitutionPillar)
+  
+  All scanners extend BaseDatabaseScanner for consistent behavior.

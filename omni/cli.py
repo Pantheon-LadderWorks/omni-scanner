@@ -21,8 +21,9 @@ if sys.platform == "win32":
 # 1. federation_heart/constitution/env_client.py (for federation env)
 # 2. fetcher.py (ONLY when actually scanning CMP database)
 
-from omni.core import io, gate
-from omni.core.scanners import SCANNERS
+from omni.lib import io
+from omni.core import gate
+from omni.scanners import SCANNERS
 from omni.core.model import ScanResult
 
 __version__ = "0.5.0"
@@ -63,74 +64,84 @@ def cmd_scan(args):
     # For v0.1, we only aggregate surfaces for global scan to match V8 Atlas
     # For single target, we run all active scanners
     
-    if args.all:
-        total_surfaces = []
-        print(f"[SCAN] Scanning {len(targets)} projects from Registry...")
+    # Combined Execution Logic
+    
+    # Safety Check: Do not allow running ALL scanners on ALL targets
+    if len(targets) > 1 and not args.scanners:
+        print("⚠️  SAFETY INTERLOCK: Scanning multiple targets requires explicit --scanners")
+        print("   Usage: omni scan --all --scanners=surfaces")
+        return
+
+    # Determine Active Scanners
+    if args.scanners:
+        wanted = args.scanners.split(',')
+        active_scanners = []
+        for k, v in SCANNERS.items():
+            if k in wanted:
+                active_scanners.append((k, v))
+    else:
+        active_scanners = list(SCANNERS.items())
+
+    print(f"[SCAN] Targeting: {target_label}")
+    print(f"[CTRL] Active Scanners: {', '.join([k for k,v in active_scanners])}")
+    
+    # Run Scanners
+    for name, scanner_func in active_scanners:
+        print(f"  > Running {name}...", end="\n") # Newline for progress
         
-        # Only run Surface scanner for global
-        from omni.core.scanners import surfaces
+        aggregated_items = []
+        failed_targets = 0
+        
+        # Build kwargs once
+        scanner_kwargs = {}
+        if name == "canon":
+            if hasattr(args, 'canon_source') and args.canon_source: scanner_kwargs['source'] = True
+            if hasattr(args, 'canon_verify') and args.canon_verify: scanner_kwargs['verify'] = True
+            if hasattr(args, 'canon_school') and args.canon_school: scanner_kwargs['school'] = args.canon_school
+        if name == "git":
+            if hasattr(args, 'github') and args.github: scanner_kwargs['github'] = True
+            if hasattr(args, 'no_update_registry') and args.no_update_registry: scanner_kwargs['update_registry'] = False
+        if name == "velocity":
+            if hasattr(args, 'since') and args.since: scanner_kwargs['since'] = args.since
+
+        # Loop Targets
+        count = 0
         for t in targets:
             if not t.exists(): continue
             try:
-                res = surfaces.scan(t)
-                total_surfaces.extend(res['items'])
-            except Exception:
-                pass
-        
-        results['surfaces'] = {
-            "count": len(total_surfaces),
-            "items": total_surfaces
-        }
-        print(f"  [OK] surfaces complete ({len(total_surfaces)} items)")
-        
-    else:
-        # Single Target - Run All Scanners
-        target_path = targets[0]
-        
-        # Determine Scanners
-        if args.scanners:
-            wanted = args.scanners.split(',')
-            # Debugging why this is empty
-            # print(f"DEBUG: Wanted: {wanted}, Available: {list(SCANNERS.keys())}")
-            
-            # Strict filtering: Only what is asked
-            # Strict filtering: Only what is asked
-            active_scanners = []
-            for k, v in SCANNERS.items():
-                if k in wanted:
-                    active_scanners.append((k, v))
-                # Explicitly DO NOT include others
-        else:
-            active_scanners = SCANNERS.items()
-
-        print(f"[SCAN] Targeting: {target_path}")
-        print(f"[CTRL] Active Scanners: {', '.join([k for k,v in active_scanners])}")
-        
-        # Setup Progress / Logging (Simple implementation for now)
-        # In a real impl, we'd pass a callback to scanners or hijack print
-        # For v0.1: just run them.
-        
-        for name, scanner_func in active_scanners:
-            print(f"  > Running {name}...", end="\r")
-            try:
-                # Build scanner kwargs from args
-                scanner_kwargs = {}
+                # Simple progress for multi-target
+                if len(targets) > 1 and count % 5 == 0:
+                    print(f"    Scanning [{count}/{len(targets)}]: {t.name}", end="\r")
                 
-                # Canon scanner specific kwargs
-                if name == "canon":
-                    if hasattr(args, 'canon_source') and args.canon_source:
-                        scanner_kwargs['source'] = True
-                    if hasattr(args, 'canon_verify') and args.canon_verify:
-                        scanner_kwargs['verify'] = True
-                    if hasattr(args, 'canon_school') and args.canon_school:
-                        scanner_kwargs['school'] = args.canon_school
+                res = scanner_func(t, **scanner_kwargs)
                 
-                # Call scanner with kwargs
-                results[name] = scanner_func(target_path, **scanner_kwargs)
-                print(f"  [OK] {name} complete    ")
+                # Aggregation Logic
+                if isinstance(res, dict):
+                    if 'items' in res:
+                        # Append source metadata to items if not present?
+                        # Surfaces scanner likely handles its own context, but for global aggregation it helps.
+                        # For now, just extend.
+                        aggregated_items.extend(res['items'])
+                    else:
+                        # Treat the dict as a single finding/report? 
+                        # Or maybe it has other keys. 
+                        # Fallback: wrap in item
+                        aggregated_items.append(res)
+                elif isinstance(res, list):
+                    aggregated_items.extend(res)
+                    
             except Exception as e:
-                results[name] = {"error": str(e)}
-                print(f"  [ERR] {name} failed: {e}")
+                failed_targets += 1
+                # print(f"    [ERR] {t.name}: {e}") # Too noisy for global?
+            
+            count += 1
+            
+        print(f"  [OK] {name} complete. Found {len(aggregated_items)} items.        ")
+        
+        results[name] = {
+            "count": len(aggregated_items),
+            "items": aggregated_items
+        }
 
     # Aggregation & Summary logic
     summary = {}
@@ -207,10 +218,12 @@ def cmd_scan(args):
             else:
                 # Full canon scan
                 slug = "canon"
-    elif args.all:
-        slug = "global"
     elif args.scanners:
         slug = "_".join(sorted(wanted))
+        if args.all:
+            slug = f"{slug}.global"
+    elif args.all:
+        slug = "global"
     elif args.target != ".":
          # If single target without specific scanners, maybe use target name?
          # But usually we want known types.
@@ -379,6 +392,59 @@ def _print_summary(scan_data: ScanResult, top: int = None, verbosity: str = "def
                 schema = school.get('schema_version', '?')
                 print(f"      {school_id:2}. {emoji} {name:20} - {op_count:2} ops (v{schema})")
     
+    # Velocity (Git Archaeology)
+    velocity_data = findings.get("velocity", {})
+    if velocity_data.get('count', 0) > 0:
+        items = velocity_data.get('items', [])
+        successful = [i for i in items if not i.get('error')]
+        failed = [i for i in items if i.get('error')]
+        
+        if successful:
+            # Aggregate metrics
+            total_commits = sum(i['total_commits'] for i in successful)
+            total_added = sum(i['lines_added'] for i in successful)
+            total_deleted = sum(i['lines_deleted'] for i in successful)
+            total_net = total_added - total_deleted
+            
+            # Get date range (proper span calculation)
+            all_first = [i['first_commit'] for i in successful if i['first_commit']]
+            all_last = [i['last_commit'] for i in successful if i['last_commit']]
+            
+            if all_first and all_last:
+                from datetime import datetime
+                first_commit = min(all_first)
+                last_commit = max(all_last)
+                first_date = datetime.fromisoformat(first_commit.replace('Z', '+00:00'))
+                last_date = datetime.fromisoformat(last_commit.replace('Z', '+00:00'))
+                total_days = max(1, (last_date - first_date).days)
+                
+                avg_lines_per_day = total_net / total_days
+                
+                print(f"🔥 VELOCITY: {len(successful)}/{len(items)} repos analyzed")
+                print(f"   📈 Commits: {total_commits:,}")
+                print(f"   💻 Net Lines: {total_net:+,}")
+                print(f"   📅 Span: {first_commit[:10]} → {last_commit[:10]} ({total_days} days)")
+                print(f"   ⚡ Lines/Day: {avg_lines_per_day:+,.2f}")
+                
+                if avg_lines_per_day > 1000:
+                    print(f"   🌌 That's EMERGENCE AT VELOCITY! 🔥")
+                
+                if verbosity in ["verbose", "debug"] or top:
+                    # Top repos by velocity
+                    top_repos = sorted(successful, key=lambda r: r['lines_per_day'], reverse=True)[:10]
+                    print(f"\n   🚀 Top Repos by Velocity:")
+                    for i, repo in enumerate(top_repos, 1):
+                        print(f"      {i:2}. {repo['name']:30} {repo['lines_per_day']:>10,.2f} lines/day")
+                        print(f"          {repo['total_commits']:>4} commits, {repo['net_lines']:>+10,} net lines")
+            else:
+                # No date info available
+                print(f"🔥 VELOCITY: {len(successful)}/{len(items)} repos analyzed")
+                print(f"   📈 Commits: {total_commits:,}")
+                print(f"   💻 Net Lines: {total_net:+,}")
+        
+        if failed:
+            print(f"   ⚠️  {len(failed)} repos failed to parse")
+    
     print("-" * 40)
     print("See artifacts/omni/scan_debug.log for details.")
 
@@ -495,6 +561,156 @@ def cmd_registry_render(args):
     from omni.core import renderer
     renderer.regenerate_registry()
 
+def cmd_registry_get(args):
+    """The Boss Hammer: Query the registry for any entity (including virtual projects)."""
+    from omni.core import registry
+    import json
+    import yaml
+
+    # Load ALL projects, including virtual ones
+    projects = registry.parse_registry(include_virtual=True)
+    
+    target = args.name.lower()
+    found = None
+    
+    # Fuzzy Search Logic
+    for p in projects:
+        # Check UUID, Name, or Display Name
+        uuid_str = str(p.get('uuid', '')).lower()
+        name = p.get('name', '').lower()
+        display = p.get('display_name', '').lower()
+        
+        if (target == uuid_str or 
+            target in name or 
+            target in display or
+            name == target or
+            display == target):
+            found = p
+            break
+            
+    if found:
+        # Output clean JSON or YAML
+        if args.json:
+            print(json.dumps(found, indent=2, default=str))
+        else:
+            # YAML is easier to read for humans
+            print(yaml.dump(found, sort_keys=False, default_flow_style=False))
+    else:
+        print(f"👻 Entity '{args.name}' not found in the Registry.")
+        print(f"\nHint: Try 'omni scan registry' to see all {len(projects)} projects.")
+
+def cmd_registry_summary(args):
+    """Boss Hammer Summary: Show registry statistics and breakdown."""
+    import json
+    from collections import defaultdict
+
+    # Use CartographyPillar via settings shim
+    try:
+        from omni.config.settings import get_cartography
+        
+        carto = get_cartography()
+        if not carto:
+            print("❌ CartographyPillar not available")
+            return
+        
+        registry_data = carto.get_registry("projects")
+        
+        if not registry_data:
+            print("❌ PROJECT_REGISTRY_V1.yaml not found")
+            return
+            
+        stats = registry_data.get('stats', {})
+        projects = registry_data.get('projects', [])
+        
+    except ImportError:
+        print("❌ federation_heart not available - cannot use CartographyPillar")
+        return
+    except Exception as e:
+        print(f"❌ Failed to load registry: {e}")
+        return
+    
+    # Calculate additional stats
+    workspace_counts = defaultdict(int)
+    visibility_counts = defaultdict(int)
+    status_counts = defaultdict(int)
+    classification_counts = defaultdict(int)
+    
+    for p in projects:
+        # Count by workspace (first path only)
+        paths = p.get('local_paths', [])
+        if paths:
+            first_path = str(paths[0])
+            if 'Infrastructure' in first_path:
+                workspace_counts['Infrastructure'] += 1
+            elif 'Workspace' in first_path:
+                workspace_counts['Workspace'] += 1
+            elif 'Deployment' in first_path:
+                workspace_counts['Deployment'] += 1
+            elif 'Projects' in first_path:
+                workspace_counts['Projects'] += 1
+            else:
+                workspace_counts['Other'] += 1
+        
+        # Count by visibility
+        vis = p.get('visibility', 'unknown')
+        visibility_counts[vis] += 1
+        
+        # Count by status
+        status = p.get('status', 'unknown')
+        status_counts[status] += 1
+        
+        # Count by classification
+        classification = p.get('classification', 'unknown')
+        classification_counts[classification] += 1
+    
+    # Output
+    print("📊 PROJECT REGISTRY SUMMARY")
+    print("=" * 50)
+    print(f"\n🗂️  Total Projects: {stats.get('total', len(projects))}")
+    print(f"   ├─ With GitHub: {stats.get('github', '?')}")
+    print(f"   ├─ Linked (local): {stats.get('linked', '?')}")
+    print(f"   ├─ Cloud Only: {stats.get('cloud_only', '?')}")
+    print(f"   ├─ Virtual (CMP-only): {stats.get('virtual', '?')}")
+    print(f"   └─ Snapshots: {stats.get('local_snapshot', '?')}")
+    
+    print(f"\n🗺️  Workspace Distribution:")
+    for workspace, count in sorted(workspace_counts.items(), key=lambda x: x[1], reverse=True):
+        print(f"   ├─ {workspace}: {count}")
+    
+    print(f"\n🔒 Visibility:")
+    for vis, count in sorted(visibility_counts.items(), key=lambda x: x[1], reverse=True):
+        print(f"   ├─ {vis}: {count}")
+    
+    print(f"\n📋 Classification:")
+    for classification, count in sorted(classification_counts.items(), key=lambda x: x[1], reverse=True):
+        print(f"   ├─ {classification}: {count}")
+    
+    print(f"\n✅ Status:")
+    for status, count in sorted(status_counts.items(), key=lambda x: x[1], reverse=True):
+        print(f"   ├─ {status}: {count}")
+    
+    total = stats.get('total', len(projects))
+    linked = stats.get('linked', 0)
+    if total > 0:
+        coverage = linked / total * 100
+    else:
+        coverage = 0.0
+    print(f"\n💡 Local Path Coverage: {linked}/{total} = {coverage:.1f}%")
+    
+    if args.json:
+        print("\n" + "=" * 50)
+        print("JSON Output:")
+        output = {
+            "total": total,
+            "stats": stats,
+            "workspace_distribution": dict(workspace_counts),
+            "visibility": dict(visibility_counts),
+            "classification": dict(classification_counts),
+            "status": dict(status_counts),
+            "coverage_percent": round(coverage, 1)
+        }
+        print(json.dumps(output, indent=2))
+
 def cmd_library(args):
     """
     Run the Grand Librarian (ACE's Taxonomy Engine).
@@ -505,7 +721,7 @@ def cmd_library(args):
     """
     import yaml
     from omni.core import librarian
-    from omni.core.scanners import library
+    from omni.scanners import library
     
     if args.library_command == "curate":
         # Load census
@@ -584,6 +800,15 @@ def cmd_library(args):
     elif args.library_command == "organize":
         print("⚠️ Organize command not yet implemented (would move/link files by taxonomy)")
         print("   For safety, use --dry-run before actual organization.")
+
+def cmd_introspect(args):
+    """
+    Omni examines itself - scanners, commands, drift detection.
+    
+    Pattern: Scan Self → Report Reality → Detect Drift
+    """
+    from omni.commands.introspect import cmd_introspect as introspect_impl
+    return introspect_impl(args)
 
 def cmd_interpret(args):
     """
@@ -740,6 +965,13 @@ def main():
     p_scan.add_argument("--canon-verify", action="store_true", help="(canon scanner) Compare source vs built canon")
     p_scan.add_argument("--canon-school", metavar="SCHOOL", help="(canon scanner) Filter to specific school (number or name)")
     
+    # Git scanner specific flags
+    p_scan.add_argument("--github", action="store_true", help="(git scanner) Use gh CLI to scan all GitHub repos (user + orgs)")
+    p_scan.add_argument("--no-update-registry", action="store_true", help="(git scanner) Don't auto-update repo_inventory.json")
+    
+    # Velocity scanner specific flags  
+    p_scan.add_argument("--since", metavar="DATE", help="(velocity scanner) Filter commits since date (e.g., '2025-01-01', '1 month ago')")
+    
     # Log Levels
     p_scan.add_argument("--quiet", "-q", dest="verbosity", action="store_const", const="quiet", help="Minimal output")
     p_scan.add_argument("--verbose", "-v", dest="verbosity", action="store_const", const="verbose", help="Verbose output")
@@ -750,6 +982,12 @@ def main():
     p_inspect = subparsers.add_parser("inspect", help="Deep inspection of a path")
     p_inspect.add_argument("path", help="Path to inspect")
     p_inspect.set_defaults(func=cmd_inspect)
+
+    # INTROSPECT (Self-scan)
+    p_introspect = subparsers.add_parser("introspect", help="Omni examines itself (scanners, commands, drift)")
+    p_introspect.add_argument("--drift", action="store_true", help="Show drift between manifests and filesystem")
+    p_introspect.add_argument("--scanners", dest="scanners_only", action="store_true", help="Show scanner inventory only")
+    p_introspect.set_defaults(func=cmd_introspect)
 
     # GATE
     p_gate = subparsers.add_parser("gate", help="Enforce quality gates")
@@ -832,6 +1070,17 @@ def main():
     p_reg_render = sp_reg.add_parser("render", help="Regenerate MD tables from Frontmatter")
     p_reg_render.set_defaults(func=cmd_registry_render)
 
+    # registry get (The Boss Hammer)
+    p_reg_get = sp_reg.add_parser("get", help="Query a registry entity (includes virtual projects)")
+    p_reg_get.add_argument("name", help="Name or UUID of the project")
+    p_reg_get.add_argument("--json", action="store_true", help="Output as JSON instead of YAML")
+    p_reg_get.set_defaults(func=cmd_registry_get)
+    
+    # registry summary (Boss Hammer Summary)
+    p_reg_summary = sp_reg.add_parser("summary", help="Show registry statistics and breakdown")
+    p_reg_summary.add_argument("--json", action="store_true", help="Output as JSON")
+    p_reg_summary.set_defaults(func=cmd_registry_summary)
+    
     # registry events
     p_reg_events = sp_reg.add_parser("events", help="Generate Event Registry from scan")
     p_reg_events.add_argument("-o", "--output", default=str(REGISTRY_ROOT / "events" / "EVENT_REGISTRY.yaml"), help="Output file")

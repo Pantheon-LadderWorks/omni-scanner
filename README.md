@@ -23,14 +23,24 @@
 
 ### Windows (Recommended)
 ```powershell
-cd Infrastructure/tools
+cd Infrastructure/tools/omni
 .\omni.bat audit uuids
 ```
 
 ### Cross-Platform
 ```bash
-cd Infrastructure/tools
+cd Infrastructure/tools/omni
 python -m omni audit uuids
+```
+
+### Quick Health Check
+```powershell
+# View git health summary (requires prior git scan)
+python show_health.py
+
+# Or run fresh scan + view
+omni scan --all --scanners=git
+python show_health.py
 ```
 
 ---
@@ -120,8 +130,72 @@ scan:
 ## 🏗️ Architecture
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the "Living Source of Truth" blueprint.
 
+---
+
+## 📚 Documentation
+
+### For AI Coding Agents
+- **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - Complete guide for GitHub Copilot and other AI agents working in this codebase
+
+### Core Documentation
+- **[omni/core/README.md](omni/core/README.md)** - Core intelligence layer (identity, registry, orchestration)
+- **[omni/scanners/README.md](omni/scanners/README.md)** - Scanner plugin system and available scanners
+- **[omni/pillars/README.md](omni/pillars/README.md)** - Large subsystem capabilities (cartography, gatekeeper, intel, registry)
+- **[omni/lib/README.md](omni/lib/README.md)** - Shared utilities (I/O, rendering, requirements, TAP, tree)
+
+### Code Generation
+- **[omni/builders/README.md](omni/builders/README.md)** - Code generation from canonical specs
+- **[omni/scaffold/README.md](omni/scaffold/README.md)** - Template instantiation and scaffolding
+- **[omni/templates/README.md](omni/templates/README.md)** - Template files and usage
+
+### Configuration & Testing
+- **[omni/config/README.md](omni/config/README.md)** - Configuration management and Federation Heart bridge
+- **[tests/README.md](tests/README.md)** - Test suite structure and running tests
+
+### Maintenance
+- **[scripts/README.md](scripts/README.md)** - One-time migrations and reconciliation scripts
+
+### Historical Context
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and changes
+- **[ROADMAP.md](ROADMAP.md)** - Future development plans
+- **[KANBAN.md](KANBAN.md)** - Current work tracking
+
+---
+
+## 🗺️ Quick Navigation
+
+**I want to...**
+
+| Goal | Documentation |
+|------|--------------|
+| Understand Omni's purpose and architecture | [README.md](README.md), [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Get AI agent guidance for this codebase | [.github/copilot-instructions.md](.github/copilot-instructions.md) |
+| Run scans and interpret results | [README.md](#-command-reference) |
+| Add a new scanner | [omni/scanners/README.md](omni/scanners/README.md) |
+| Understand the registry system | [omni/core/README.md](omni/core/README.md) |
+| Generate code from templates | [omni/scaffold/README.md](omni/scaffold/README.md) |
+| Run tests | [tests/README.md](tests/README.md) |
+| Fix UUID conflicts | [scripts/README.md](scripts/README.md) |
+| Configure scans | [omni/config/README.md](omni/config/README.md) |
+| See what's coming next | [ROADMAP.md](ROADMAP.md) |
+
+---
+
 ## ⚖️ License
 MIT License. See [LICENSE](LICENSE).
 
 ---
-*Forged by The Architect & Antigravity (Approved by Mega)*
+
+## 🙏 Credits
+**Forged by:**
+- **The Architect** (Krystal Neely / Kryssie)
+- **Antigravity** (ACE + Gemini 2.0 Flash Antigravity Runtime)
+- **Oracle** (GitHub Copilot - Constitutional Guardian)
+
+**Approved by:** MEGA (Grandmaster Protocol)
+
+**Law & Lore:** Charter V1.2 compliant
+
+---
+
+*May the Source be with You!* ™️ 🌌

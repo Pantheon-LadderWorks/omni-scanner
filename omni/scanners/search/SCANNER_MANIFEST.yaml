@@ -1,0 +1,25 @@
+# Search Scanner Category Manifest
+# ================================
+
+# This category provides pattern and regex search capabilities,
+# inspired by Serena's search_for_pattern tool (the BEST!)
+
+metadata:
+  category: "search"
+  description: "Pattern and regex search across codebase"
+  authority: "Oracle + Serena (The Dream Team!)"
+  inspiration: "Serena's 27 tools, especially search_for_pattern"
+
+scanners:
+  - name: "pattern_search"
+    file: "pattern_search.py"
+    function: "search_pattern"
+    description: "Fast pattern/regex search with context lines"
+    layer: "cognitive"
+    authority: "Oracle + Serena"
+    use_cases:
+      - "Find all mentions of a term"
+      - "Regex search for patterns (UUIDs, emails, etc.)"
+      - "Track function/symbol references"
+      - "Find TODO/FIXME comments"
+      - "Code archaeology (where was X mentioned?)"

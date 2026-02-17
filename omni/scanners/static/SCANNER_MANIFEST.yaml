@@ -1,0 +1,35 @@
+category: static
+description: "Filesystem analysis scanners - no runtime dependencies"
+scanners:
+  - name: surfaces
+    file: surfaces.py
+    function: scan
+    description: "Scans for contract surfaces (.contract.yaml)"
+  - name: docs
+    file: docs.py
+    function: scan
+    description: "Scans for documentation files"
+  - name: deps
+    file: deps.py
+    function: scan
+    description: "Scans for dependency files"
+  - name: contracts
+    file: contracts.py
+    function: scan
+    description: "Scans for contract files"
+  - name: tools
+    file: tools.py
+    function: scan
+    description: "Scans for tool definitions"
+  - name: uuids
+    file: uuids.py
+    function: scan
+    description: "Scans for UUID references"
+  - name: hooks
+    file: hooks.py
+    function: scan
+    description: "Scans for git hooks"
+  - name: events
+    file: events.py
+    function: scan
+    description: "Scans for event schema definitions"

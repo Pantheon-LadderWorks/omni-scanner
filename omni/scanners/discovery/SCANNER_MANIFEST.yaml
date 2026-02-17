@@ -1,0 +1,38 @@
+category: discovery
+description: "Structure discovery scanners - find and catalog components"
+scanners:
+  - name: cores
+    file: cores.py
+    function: scan
+    description: "Discovers core files in projects"
+  - name: cli
+    file: cli.py
+    function: scan
+    description: "Scans for CLI commands (@command decorator)"
+  - name: cli_edge
+    file: cli_edge_scanner.py
+    function: scan
+    description: "CLI edge case scanner"
+  - name: canon
+    file: canon.py
+    function: scan
+    description: "CodeCraft canon scanner"
+  - name: project
+    file: project.py
+    function: scan
+    description: "Builds PROJECT_REGISTRY_V1.yaml from sources"
+  - name: archive
+    file: archive_scanner.py
+    function: scan
+    description: "General-purpose archive scanner (.zip, .tar.gz, .tar.bz2, .tar.xz) - detects .git, node_modules, venv, security concerns"
+  - name: mcp_server_discovery
+    file: mcp_server_discovery.py
+    function: scan
+    description: "Discovers MCP servers across all workspaces by detecting @server decorators and Server() instantiation. Returns server name, tool count, description, and entry point status. Use when cataloging Federation MCP capabilities or updating governance registry."
+    use_cases:
+      - "Find all MCP servers across Infrastructure/Workspace/Deployment/Projects"
+      - "Auto-catalog servers for governance registry updates"
+      - "Discover scattered servers (languages/, applications/, memory-substrate/)"
+      - "Count total tools available across Federation MCP ecosystem"
+
+

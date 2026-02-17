@@ -1,238 +1,128 @@
-# 🧠 Omni Core Modules
+# 🧠 Omni Core Kernel
 
 **Location:** `omni/core/`  
 **Purpose:** Core intelligence and orchestration layer for the Federation Tricorder  
-**Version:** 0.6.1  
-**Status:** Living Architecture
+**Version:** 0.7.0 (Federation Instrument Pattern)  
+**Status:** Canonical Kernel
 
 ---
 
-## 📋 Module Registry
+## 📋 The Kernel Registry
 
-### 🗺️ Cartography & Mapping
+The Core has been slimmed down to the absolute essentials. These modules form the **Conductor** of the Federation Instrument.
 
-#### `cartographer.py`
-- **Type:** Ecosystem Intelligence Agent
-- **Purpose:** Analyzes complex project ecosystems and generates comprehensive maps, guides, and visualizations
-- **Key Classes:** `EcosystemCartographer`, `ProjectNode`, `EcosystemMap`
-- **Capabilities:**
-  - Project discovery and relationship analysis
-  - Architectural pattern recognition
-  - Technology stack analysis
-  - Health metrics calculation
-  - Comprehensive guide generation
-  - Network visualization (requires matplotlib, networkx)
-- **Dependencies:** networkx, matplotlib, seaborn (optional)
-- **Output:** Ecosystem guides, relationship graphs, health reports
+### 🧬 Identity & Truth
 
-#### `tree.py`
-- **Type:** Directory Visualization
-- **Purpose:** Generates clean directory trees for documentation
-- **Capabilities:**
-  - Smart filtering (ignores node_modules, __pycache__, etc.)
-  - Configurable depth limits
-  - Documentation-ready output
-- **Output:** Formatted directory tree strings
+#### `identity_engine.py` (**The One Ring**)
+- **Type:** Identity Resolution Engine
+- **Purpose:** The Single Source of Truth for Project Identity.
+- **Responsibilities:**
+  - Defines the canonical `NAMESPACE_CMP` (The One Ring).
+  - Computes deterministic UUIDv5s from project keys.
+  - Enforces conflict resolution policies (Policy C: Freeze & Adjudicate).
+  - Resolves "Ghost" vs "Living" project states.
+- **Key Models:** `ProjectIdentity`, `RepoInventoryItem`
 
----
-
-### 📜 Registry & Identity Management
+#### `registry_builder.py` (**The Truth Maker**)
+- **Type:** Registry Construction
+- **Purpose:** Derives `PROJECT_REGISTRY_V1.yaml` from authoritative sources.
+- **Responsibilities:**
+  - Ingests GitHub Inventory (`repo_inventory.json`).
+  - Scans local filesystem (via `scanners/git`).
+  - Applies Governance Overrides (`LOCAL_OVERRIDES_V1.yaml`).
+  - Merges Legacy Oracle data.
+  - Produces the High-Fidelity Registry.
 
 #### `registry.py`
-- **Type:** Registry Parser (Legacy V1)
-- **Purpose:** Parses project registry files
-- **Status:** Maintained for backward compatibility
-- **Migration Path:** Use `registry_v2.py` for new implementations
-
-#### `registry_v2.py`
-- **Type:** Registry Parser V2
-- **Purpose:** Parses Registry V2 format with Identity+Facets frontmatter schema
-- **Key Features:**
-  - Frontmatter YAML parsing
-  - Identity extraction (UUIDs, names, roles)
-  - Facet parsing (domains, specializations, twin bonds)
-  - Full metadata support
-- **Schema:** SERAPHINA Registry V2 (Identity+Facets)
-
-#### `registry_events.py`
-- **Type:** Event Registry Generator
-- **Purpose:** Generates `EVENT_REGISTRY.yaml` from scan results
+- **Type:** Registry Parser
+- **Purpose:** operational interface for reading registries.
 - **Capabilities:**
-  - Aggregates event emissions from codebase
-  - Validates Crown Bus event schemas
-  - Generates canonical event documentation
-- **Output:** `EVENT_REGISTRY.yaml`
-
-#### `provenance.py`
-- **Type:** UUID Provenance Index (UPI)
-- **Purpose:** Tracks UUID usage across filesystem vs Registry truth
-- **Key Features:**
-  - Canonical UUID verification
-  - Orphan detection (UUIDs not in registry)
-  - Ghost detection (Registry UUIDs not in filesystem)
-  - Test junk filtering
-- **Output:** UUID provenance reports
-
-#### `fetcher.py`
-- **Type:** Database Synchronization
-- **Purpose:** Fetches canonical UUIDs from CMP/CMS PostgreSQL database
-- **Capabilities:**
-  - Database connection management
-  - UUID extraction from agents/projects tables
-  - Registry synchronization
-- **Dependencies:** Database connection configured
+  - Parses `PROJECT_REGISTRY_V1.yaml` (New Standard).
+  - Parses legacy markdown registries (Backward Compatibility).
+  - Provides `parse_master_registry_md` for legacy translation.
 
 ---
 
-### 🔍 Analysis & Compliance
+### 🎹 Orchestration & Systems
 
-#### `gate.py`
-- **Type:** Compliance Enforcement
-- **Purpose:** CI/CD gate checks for Federation standards
-- **Capabilities:**
-  - Identity enforcement (no new orphan UUIDs)
-  - Constitutional compliance verification
-  - Build failure on violations
-- **Use Case:** Pre-commit hooks, CI/CD pipelines
+#### `system.py` (**The Instrument**)
+- **Type:** OmniInstrument Orchestrator
+- **Purpose:** The main entry point that boots the system.
+- **Responsibilities:**
+  - Initializes Pillars (lazy-loaded).
+  - Dispatches commands to the appropriate subsystem.
+  - Manages the lifecycle of a scan operation.
+  - Orchestrates the "Scan → Analyze → Report" loop.
 
-#### `requirements.py`
-- **Type:** Dependency Management
-- **Purpose:** Federation-wide Python dependency analysis
+#### `config.py` (**The Bridge**)
+- **Type:** Configuration Shim
+- **Purpose:** Bridges Omni to the Federation Heart.
+- **Responsibilities:**
+  - Lazy-loads `constitution` and `cartography` pillars from `federation_heart`.
+  - Provides standalone fallbacks if the Heart is missing.
+  - Loads `omni.yml` configuration checks.
+
+#### `paths.py` (**Tier 1 Anchor**)
+- **Type:** Path Resolution
+- **Purpose:** Foundational identifying of "Where Things Are".
 - **Capabilities:**
-  - Recursive requirement scanning
-  - Deduplication and merging
-  - Version locking to current install
-  - `requirements.federation.txt` generation
-- **Commands:**
-  - `omni audit deps` - Scan and generate
-  - `omni audit lock` - Lock to current versions
+  - Locates Infrastructure Root.
+  - Locates Workspace and Deployment roots.
+  - Locates Tier 1 Manifests (`CONTRACT_REGISTRY`, `LOCAL_OVERRIDES`).
+  - **Note:** Does NOT depend on dynamic manifests (avoids circular dependency).
 
 ---
 
-### 📊 Reporting & Rendering
-
-#### `renderer.py`
-- **Type:** Registry Renderer
-- **Purpose:** Regenerates human-readable Markdown tables in `PROJECT_REGISTRY_MASTER.md`
-- **Capabilities:**
-  - Parses canonical frontmatter
-  - Generates formatted tables
-  - Preserves registry integrity
-- **Safety:** Read-only by default (requires explicit render command)
-
-#### `reporting.py`
-- **Type:** Report Generation
-- **Purpose:** Generates structured reports from scan results
-- **Capabilities:**
-  - JSON report formatting
-  - Summary statistics
-  - Health metrics
-  - Artifact persistence
-- **Output:** `artifacts/omni/` directory
-
----
-
-### 🛠️ Utilities & Infrastructure
-
-#### `config.py`
-- **Type:** Configuration Loader
-- **Purpose:** Loads and parses `omni.yml` configuration
-- **Schema:**
-  ```yaml
-  scan:
-    exclude: [...]
-    patterns:
-      generic_events: [...]
-  ```
-- **Defaults:** Built-in fallbacks if no config exists
-
-#### `io.py`
-- **Type:** Input/Output Utilities
-- **Purpose:** Common file operations, path handling, safe file writes
-- **Capabilities:**
-  - Safe file writes with backups
-  - Path resolution
-  - JSON/YAML parsing
-  - Encoding handling
+### 🛡️ Shared Logic
 
 #### `model.py`
 - **Type:** Data Models
-- **Purpose:** Shared data structures for scan results
+- **Purpose:** The universal language of scan results.
 - **Key Classes:**
-  - `ScanResult` - Standard scan result format
-    - `target`: str - Scan target path
-    - `version`: str - Scanner version
-    - `timestamp`: str - ISO8601 timestamp
-    - `findings`: dict - Scanner-specific findings
-    - `summary`: dict - Summary statistics
+  - `ScanResult`: The standard contract for all scanners.
+  - `ScanFinding`: Structured finding format.
 
-#### `tap.py`
-- **Type:** Crown Bus Tap Utility
-- **Purpose:** Runtime event verification and debugging
+#### `gate.py`
+- **Type:** Policy Enforcement
+- **Purpose:** The Gatekeeper's logic enforcement.
 - **Capabilities:**
-  - Event emission monitoring
-  - Crown Bus topic validation
-  - Runtime telemetry capture
-- **Use Case:** Development debugging, event auditing
-
-#### `brain.py` *(New in v0.6.1)*
-- **Type:** AI Integration Utilities
-- **Purpose:** Brain/orchestration helpers for AI integration
-- **Use Case:** Agent coordination, model management
-
-#### `librarian.py` *(New in v0.6.1)*
-- **Type:** Documentation Librarian
-- **Purpose:** Library scanning and documentation management
-- **Use Case:** Documentation discovery, README indexing
-
-#### `paths.py` *(New in v0.6.1)*
-- **Type:** Path Resolution
-- **Purpose:** Federation-aware path resolution and discovery
-- **Capabilities:**
-  - Infrastructure root detection
-  - Station path resolution
-  - Registry path management
-- **Use Case:** Cross-project path handling
+  - Validates scan results against Constitutional policies.
+  - Enforces "No New Orphans" rule.
+  - Checks for critical compliance violations.
 
 ---
 
-### 📁 Scanners Subsystem
+## 🏛️ Architecture & Migration (v0.7.0)
 
-#### `scanners/`
-- **Type:** Plugin Registry
-- **Purpose:** Modular scanner implementations
-- **See:** `scanners/README.md` for detailed scanner documentation
-- **Registry:** `scanners/__init__.py` exposes `SCANNERS` dict
+In the **Federation Instrument Pattern** (v0.7.0), the Core was refactored to separate **Orchestration** (Core) from **Capability** (Pillars/Lib).
 
----
+### 🚛 Migrated Capabilities
 
-## 🏗️ Architecture Patterns
+Capabilities that were previously in Core have moved to specialized homes:
 
-### Module Responsibilities
+| Capability | Old Location | New Location |
+|yy----------|--------------|--------------|
+| **Intelligence** | `brain.py`, `librarian.py` | `omni/pillars/intel.py` |
+| **Cartography** | `cartographer.py`, `fetcher.py` | `omni/pillars/cartography.py` |
+| **Gatekeeping** | `provenance.py` | `omni/pillars/gatekeeper.py` |
+| **Rendering** | `renderer.py`, `tree.py` | `omni/lib/renderer.py`, `omni/lib/tree.py` |
+| **Reporting** | `reporting.py` | `omni/lib/reporting.py` |
+| **Requirements** | `requirements.py` | `omni/lib/requirements.py` |
+| **I/O Ops** | `io.py` | `omni/lib/io.py` |
 
-**Cartography** (`cartographer.py`, `tree.py`)
-- **What:** Understanding WHERE things are and HOW they relate
-- **Writes:** Ecosystem guides, visualizations
-- **Reads:** Filesystem, project files
+### 🐝 Scanners Subsystem
 
-**Registry** (`registry*.py`, `provenance.py`, `fetcher.py`)
-- **What:** Understanding WHO things are (identity management)
-- **Writes:** Provenance reports, event registries
-- **Reads:** Registry files, database, filesystem
+Scanners are no longer a flat list in `core/scanners/`. They are now a **Domain-Driven Plugin System** in `omni/scanners/`.
 
-**Compliance** (`gate.py`, `requirements.py`)
-- **What:** Enforcing WHAT the rules are
-- **Writes:** Compliance reports, requirement locks
-- **Reads:** Registry, filesystem, Python environment
+**Categories:**
+*   `static/` - Filesystem analysis (Docs, Contracts, Deps)
+*   `polyglot/` - Language ecosystems (Node, Rust)
+*   `health/` - Runtime health checks (Federation, Station)
+*   `discovery/` - Structure discovery (Cores, CLI)
+*   `git/` - Git repositories
+*   `fleet/` - Fleet registry generation
 
-**Rendering** (`renderer.py`, `reporting.py`)
-- **What:** Transforming data into readable formats
-- **Writes:** Markdown tables, JSON reports
-- **Reads:** Registry, scan results
-
-**Infrastructure** (`config.py`, `io.py`, `model.py`, `tap.py`)
-- **What:** Supporting HOW everything works
-- **Provides:** Shared utilities, data models, configuration
+Each category is dynamically loaded via `SCANNER_MANIFEST.yaml`.
 
 ---
 
@@ -241,82 +131,20 @@
 ```
 Filesystem Reality
        ↓
-   Scanners (scanners/)
+   Scanners (omni/scanners/)
        ↓
-   Core Modules
+   Core Kernel (omni/core/)
        ↓
 Registry Truth (governance/)
        ↓
-   Reports (artifacts/omni/)
+   Reports (omni/artifacts/)
 ```
 
 ### Key Principle
-> **The Registry is God.** Core modules reconcile filesystem reality with registry truth.
+> **The Registry is God.** The Core Kernel reconciles filesystem reality with registry truth using the `registry_builder`.
 
 ---
 
-## 🚀 Integration Points
-
-### Federation Heart Integration
-Core modules should use `federation_heart.clients.cartography` for:
-- `get_infrastructure_root()` - Canonical paths
-- `RegistryClient` - Registry navigation
-
-### Scanner Integration
-All scanners return consistent format via `model.ScanResult`:
-```python
-from omni.core.model import ScanResult
-
-def scan(target: Path) -> dict:
-    return {
-        "count": 0,
-        "items": [],
-        "metadata": {}
-    }
-```
-
----
-
-## 📚 External Dependencies
-
-**Required:**
-- Python 3.8+
-- pathlib (stdlib)
-- json, yaml (stdlib)
-
-**Optional:**
-- networkx, matplotlib, seaborn (for cartographer visualization)
-- psycopg2 (for database fetcher)
-
----
-
-## 🎯 Usage Patterns
-
-### From CLI
-```bash
-omni audit uuids    # Uses provenance.py
-omni map ecosystem  # Uses cartographer.py
-omni tree .         # Uses tree.py
-omni gate           # Uses gate.py
-```
-
-### From Code
-```python
-from omni.core import registry_v2, provenance, cartographer
-
-# Parse registry
-projects = registry_v2.parse_registry_v2()
-
-# Run provenance check
-provenance.run_uuid_audit()
-
-# Map ecosystem
-carto = cartographer.EcosystemCartographer()
-ecosystem_map = carto.analyze_ecosystem()
-```
-
----
-
-*Last Updated: January 28, 2026 (v0.6.1 + Package Refactor)*  
+*Last Updated: February 2, 2026 (v0.7.0)*  
 *Maintained by: The Federation*  
 *Constitutional Authority: Charter V1.2*

@@ -1,0 +1,14 @@
+# Omni MCP Server Requirements
+# =============================
+
+# MCP SDK
+mcp>=1.0.0
+
+# Development hot-reload (The Eternal Watcher Pattern)
+watchdog>=3.0.0
+
+# Omni core (from parent package)
+# Assumes omni is pip-installed as editable package
+
+# Universal onboarding (from stations/)
+# Will be imported from Infrastructure/stations/
