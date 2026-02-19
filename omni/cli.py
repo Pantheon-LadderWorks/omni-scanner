@@ -31,7 +31,7 @@ __author__ = "Kode_Animator"
 
 # Resolve Artifacts Root relative to this script
 OMNI_ROOT = Path(__file__).parent.resolve()
-ARTIFACTS_DIR = OMNI_ROOT / "artifacts" / "omni"
+ARTIFACTS_DIR = OMNI_ROOT.parent / "artifacts" / "omni"
 
 # Governance Registry paths (where registries should be output)
 INFRA_ROOT = OMNI_ROOT.parent.parent  # Infrastructure root
@@ -57,8 +57,8 @@ def cmd_scan(args):
         targets = [Path(p['path']) for p in projects]
         target_label = "REGISTRY (Global)"
     else:
-        targets = [Path(args.target)]
-        target_label = str(args.target)
+        targets = [Path(args.target).resolve()]
+        target_label = str(targets[0])
 
     # Initialize aggregators
     # For v0.1, we only aggregate surfaces for global scan to match V8 Atlas
@@ -90,6 +90,7 @@ def cmd_scan(args):
         print(f"  > Running {name}...", end="\n") # Newline for progress
         
         aggregated_items = []
+        aggregated_metrics = {}
         failed_targets = 0
         
         # Build kwargs once
@@ -122,6 +123,9 @@ def cmd_scan(args):
                         # Surfaces scanner likely handles its own context, but for global aggregation it helps.
                         # For now, just extend.
                         aggregated_items.extend(res['items'])
+                    if 'metrics' in res:
+                        # naive merge for now - last one wins or we implement bespoke aggregation later
+                        aggregated_metrics.update(res['metrics'])
                     else:
                         # Treat the dict as a single finding/report? 
                         # Or maybe it has other keys. 
@@ -140,7 +144,8 @@ def cmd_scan(args):
         
         results[name] = {
             "count": len(aggregated_items),
-            "items": aggregated_items
+            "items": aggregated_items,
+            "metrics": aggregated_metrics
         }
 
     # Aggregation & Summary logic
@@ -171,10 +176,12 @@ def cmd_scan(args):
     )
 
     # Output filename logic
-    slug = "default"
-    
+    scanner_name = "global"
+    scope = "default"
+
     # Special handling for canon scanner
     if args.scanners == "canon":
+        scanner_name = "canon"
         canon_result = results.get("canon", {})
         
         # Check mode
@@ -199,13 +206,13 @@ def cmd_scan(args):
                     filter_val = str(args.canon_school)
                     school_name = school_map.get(filter_val) or filter_val.lower()
                 
-                slug = school_name
+                scope = school_name
             else:
                 # All schools from source
-                slug = "arcaneschools"
+                scope = "arcaneschools"
         elif hasattr(args, 'canon_verify') and args.canon_verify:
             # Verification mode
-            slug = "canon_verification"
+            scope = "verification"
         else:
             # Scanning built canon.lock.yaml
             if hasattr(args, 'canon_school') and args.canon_school:
@@ -214,32 +221,36 @@ def cmd_scan(args):
                 for school in canon_result.get('schools', []):
                     school_name = school.get('name', '').lower().replace(' ', '_').replace('&', 'and')
                     break
-                slug = f"{school_name or 'school'}" if school_name else "school"
+                scope = f"{school_name or 'school'}" if school_name else "school"
             else:
                 # Full canon scan
-                slug = "canon"
+                scope = "lock" # specific usage for lock file scan
     elif args.scanners:
-        slug = "_".join(sorted(wanted))
+        scanner_name = "_".join(sorted(wanted))
         if args.all:
-            slug = f"{slug}.global"
+            scope = "global"
+        else:
+            scope = "default" # Was "infrastructure", changed to allow target inference
     elif args.all:
-        slug = "global"
+        scanner_name = "global"
+        scope = "snapshot"
     elif args.target != ".":
-         # If single target without specific scanners, maybe use target name?
-         # But usually we want known types.
-         # Let's check active scanners.
          active_keys = sorted([k for k,v in active_scanners])
-         slug = "_".join(active_keys)
+         scanner_name = "_".join(active_keys)
+         scope = target_label.replace("\\", "_").replace("/", "_").replace(":", "")
 
-    output_dir = ARTIFACTS_DIR
-    output_dir.mkdir(parents=True, exist_ok=True)
-    filename = f"scan.{slug}.json"
-    output_path = output_dir / filename
+    # Clean scope
+    if scope == "default" and args.target == ".":
+        # Resolve "." to folder name (e.g. "omni")
+        scope = Path.cwd().name.lower()
+
+    from omni.lib import artifacts
+    output_path = artifacts.get_scan_path(scanner=scanner_name, scope=scope)
     
     io.save_scan(scan_data, output_path)
     print(f"\n[REPORT] Saved to: {output_path}")
     
-    save_log(scan_data, output_dir / "scan_debug.log")
+    save_log(scan_data, output_path.with_name("scan_debug.log"))
     
     # 4. Final Summary
     _print_summary(scan_data, args.top, verbosity=args.verbosity)
@@ -401,22 +412,25 @@ def _print_summary(scan_data: ScanResult, top: int = None, verbosity: str = "def
         
         if successful:
             # Aggregate metrics
-            total_commits = sum(i['total_commits'] for i in successful)
-            total_added = sum(i['lines_added'] for i in successful)
-            total_deleted = sum(i['lines_deleted'] for i in successful)
+            total_commits = sum(i.get('total_commits', 0) for i in successful)
+            total_added = sum(i.get('lines_added', 0) for i in successful)
+            total_deleted = sum(i.get('lines_deleted', 0) for i in successful)
             total_net = total_added - total_deleted
             
             # Get date range (proper span calculation)
-            all_first = [i['first_commit'] for i in successful if i['first_commit']]
-            all_last = [i['last_commit'] for i in successful if i['last_commit']]
+            all_first = [i['first_commit'] for i in successful if i.get('first_commit')]
+            all_last = [i['last_commit'] for i in successful if i.get('last_commit')]
             
             if all_first and all_last:
-                from datetime import datetime
-                first_commit = min(all_first)
-                last_commit = max(all_last)
-                first_date = datetime.fromisoformat(first_commit.replace('Z', '+00:00'))
-                last_date = datetime.fromisoformat(last_commit.replace('Z', '+00:00'))
-                total_days = max(1, (last_date - first_date).days)
+                try:
+                    from datetime import datetime
+                    first_commit = min(all_first)
+                    last_commit = max(all_last)
+                    first_date = datetime.fromisoformat(first_commit.replace('Z', '+00:00'))
+                    last_date = datetime.fromisoformat(last_commit.replace('Z', '+00:00'))
+                    total_days = max(1, (last_date - first_date).days)
+                except ValueError:
+                    total_days = 1
                 
                 avg_lines_per_day = total_net / total_days
                 
@@ -444,6 +458,32 @@ def _print_summary(scan_data: ScanResult, top: int = None, verbosity: str = "def
         
         if failed:
             print(f"   ⚠️  {len(failed)} repos failed to parse")
+
+    # PR Telemetry (The Telepath)
+    pr_data = findings.get("pr-telemetry", {})
+    if pr_data.get('count', 0) > 0 or pr_data.get('metrics'):
+        metrics = pr_data.get('metrics', {})
+        avg_health = metrics.get('average_health', 0)
+        
+        # Health Bar Visualization
+        bar_len = 20
+        filled = int(avg_health / 100 * bar_len)
+        bar = "█" * filled + "░" * (bar_len - filled)
+        
+        print(f"🔮 TELEPATH: {metrics.get('total_count', 0)} PRs scanned")
+        print(f"   ❤️ Health:  [{bar}] {avg_health}%")
+        print(f"   🟢 Open:    {metrics.get('open_count', 0)}")
+        print(f"   🧟 Stale:   {metrics.get('stale_count', 0)}")
+        print(f"   ⚠️ Risk:    {metrics.get('high_risk_count', 0)}")
+        
+        if verbosity in ["verbose", "debug"] or top:
+             items = pr_data.get('items', [])
+             print(f"\n   📝 PR Details:")
+             for item in items[:(top or 10)]:
+                 h = item.get('health', 0)
+                 icon = "🟢" if h > 80 else "🟡" if h > 50 else "🔴"
+                 print(f"      {icon} #{item.get('id')} {item.get('title')[:40]:<40} (Score: {h})")
+
     
     print("-" * 40)
     print("See artifacts/omni/scan_debug.log for details.")
@@ -488,30 +528,37 @@ def cmd_audit_uuids(args):
     from omni.core import provenance
     provenance.run_provenance_audit()
 
-def cmd_audit_fetch_db(args):
-    """Fetch Canonical UUIDs from Postgres."""
-    from omni.core import fetcher
-    fetcher.run_fetch_db()
-
 def cmd_audit_deps(args):
     """Scan and generate deps."""
-    from omni.core import requirements
-    requirements.run_gen_deps(args.root, args.output)
+    try:
+        from omni.lib import requirements
+        requirements.run_gen_deps(args.root, args.output)
+    except ImportError:
+        print("❌ omni.lib.requirements not found.")
 
 def cmd_audit_lock(args):
     """Lock requirements."""
-    from omni.core import requirements
-    requirements.run_lock_deps(args.input, args.output)
+    try:
+        from omni.lib import requirements
+        requirements.run_lock_deps(args.input, args.output)
+    except ImportError:
+        print("❌ omni.lib.requirements not found.")
 
 def cmd_audit_list(args):
     """Run pip list."""
-    from omni.core import requirements
-    requirements.run_pip_list(args.filter)
+    try:
+        from omni.lib import requirements
+        requirements.run_pip_list(args.filter)
+    except ImportError:
+        print("❌ omni.lib.requirements not found.")
 
 def cmd_audit_install(args):
     """Install requirements."""
-    from omni.core import requirements
-    requirements.run_install_reqs(args.file)
+    try:
+        from omni.lib import requirements
+        requirements.run_install_reqs(args.file)
+    except ImportError:
+        print("❌ omni.lib.requirements not found.")
 
 def cmd_canon(args):
     """
@@ -524,37 +571,19 @@ def cmd_canon(args):
       omni canon scan --school 14     # Scan school operations
       omni canon hash                 # Print lock hashes
     """
-    from omni.builders import (
-        rebuild_all,
-        rebuild_language,
-        rebuild_partitions,
-        rebuild_executors,
-        verify_all,
-        hash_all,
-    )
-    
-    if args.canon_action == 'rebuild':
-        # Determine which locks to rebuild
-        if args.only_language or args.only_partitions or args.only_executors:
-            rebuild_all(
-                language=args.only_language,
-                partitions=args.only_partitions,
-                executors=args.only_executors,
-            )
-        else:
-            # Default: rebuild all
-            rebuild_all()
-    
-    elif args.canon_action == 'verify':
-        verify_all()
-    
-    elif args.canon_action == 'scan':
-        # Delegate to rosetta_archaeologist scan function
-        from omni.builders.rosetta_archaeologist import cmd_scan_school
-        cmd_scan_school(args)
-    
-    elif args.canon_action == 'hash':
-        hash_all()
+    try:
+        # Import builders defensively - they are federation-specific
+        from omni.builders.codecraft import rosetta_archaeologist
+        # Note: These builder imports might need specific paths if not in __init__
+        # For now, we assume they might be missing in open source
+        import omni.builders as builders # Check existence
+    except ImportError:
+        print("❌ Canon builders not available in this installation.")
+        return
+
+    # Attempt to use specific builders if they exist
+    # (Implementation specific to User's environment)
+    print("⚠️  Canon management commands are currently proprietary.")
 
 def cmd_registry_render(args):
     """Render Registry MD from Frontmatter."""
@@ -720,7 +749,13 @@ def cmd_library(args):
       omni library curate → Apply taxonomy, generate INSTRUCTION_REGISTRY_V1.yaml
     """
     import yaml
-    from omni.core import librarian
+    try:
+        from omni.core import librarian
+    except ImportError:
+        print("❌ omni.core.librarian module not found.")
+        print("   This feature requires the Federation Librarian component.")
+        return
+
     from omni.scanners import library
     
     if args.library_command == "curate":
@@ -742,6 +777,10 @@ def cmd_library(args):
         
         # Load taxonomy
         taxonomy_file = OMNI_ROOT / "templates" / "library_taxonomy.yaml"
+        if not taxonomy_file.exists():
+             print(f"❌ Taxonomy template not found: {taxonomy_file}")
+             return
+
         with taxonomy_file.open("r", encoding="utf-8") as f:
             taxonomy = yaml.safe_load(f)
             templates = taxonomy.get("templates", [])
@@ -759,7 +798,10 @@ def cmd_library(args):
             # but filename changes based on which domain was scanned
             if not args.output:
                 # Detect domain from scan metadata
-                scan_target = Path(scan_data.get("metadata", {}).get("target", ".")).resolve()
+                try:
+                    scan_target = Path(scan_data.get("metadata", {}).get("target", ".")).resolve()
+                except:
+                    scan_target = Path(".")
                 
                 # Check if scan was from Workspace
                 if "Workspace" in str(scan_target):
@@ -1009,11 +1051,6 @@ def main():
     p_audit_uuids = sp_audit.add_parser("uuids", help="Scan UUID provenance (unique/canonical/orphans)")
     p_audit_uuids.set_defaults(func=cmd_audit_uuids)
 
-    # audit fetch-db
-    p_audit_fetch = sp_audit.add_parser("fetch-db", help="Fetch Canonical UUIDs from local CMP Postres DB")
-    p_audit_fetch.add_argument("--env-file", default=None, help="Path to CMP .env file")
-    p_audit_fetch.add_argument("--register-missing", action="store_true", help="CAREFULLY register missing UUIDs (Not implemented)")
-    p_audit_fetch.set_defaults(func=cmd_audit_fetch_db)
 
     # audit deps
     p_audit_deps = sp_audit.add_parser("deps", help="Scan and generate federation requirements")

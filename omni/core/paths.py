@@ -34,6 +34,10 @@ def is_federation_available() -> bool:
 def get_infrastructure_root() -> Optional[Path]:
     """Get Infrastructure root path from CartographyPillar."""
     if not _federation_available or not _cartography:
+        # Fallback to local settings for standalone mode
+        from omni.config import settings
+        if hasattr(settings, "get_infrastructure_root"):
+            return settings.get_infrastructure_root()
         return None
     return _cartography.get_infrastructure_root()
 

@@ -24,10 +24,10 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 # Leviathan Armor - Protected folders to never scan
-LEVIATHAN_SCALES = {
-    "node_modules", "DevCache", ".gradle", ".rustup", ".cargo",
-    "target", "dist", "build", ".git", ".svn", ".hg",
-    "__pycache__", ".venv", "venv",
+from omni.lib.files import COMMON_EXCLUDES
+
+# Leviathan Armor - Protected folders to never scan
+LEVIATHAN_SCALES = COMMON_EXCLUDES | {
     "System Volume Information", "$RECYCLE.BIN"
 }
 

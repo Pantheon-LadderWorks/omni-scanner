@@ -1,0 +1,7 @@
+include LICENSE
+include README.md
+recursive-include omni/scaffold *
+recursive-include omni/templates *
+recursive-include omni/config/db *.yaml
+recursive-include omni/scanners/db *.yaml
+include requirements.txt

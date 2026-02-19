@@ -18,9 +18,20 @@ Builders:
 - codecraft/ - CodeCraft-specific builders (executors, partitions, rosetta)
 """
 
-from omni.builders.canonical_uuid_builder import CanonicalUUIDBuilder
-from omni.builders.commit_history_builder import CommitHistoryBuilder
-from omni.builders.registry_builder import RegistryBuilder
+try:
+    from omni.builders.canonical_uuid_builder import CanonicalUUIDBuilder
+except ImportError:
+    CanonicalUUIDBuilder = None
+
+try:
+    from omni.builders.commit_history_builder import CommitHistoryBuilder
+except ImportError:
+    CommitHistoryBuilder = None
+
+try:
+    from omni.builders.registry_builder import RegistryBuilder
+except ImportError:
+    RegistryBuilder = None
 
 __all__ = [
     "CanonicalUUIDBuilder",

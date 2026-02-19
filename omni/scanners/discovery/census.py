@@ -205,12 +205,9 @@ def scan_multi_workspace(dimension: str = "extension") -> Dict:
     
     This is the "empire census" - shows composition across all domains.
     """
-    workspaces = [
-        Path(r"C:\Users\kryst\Infrastructure"),
-        Path(r"C:\Users\kryst\Workspace"),
-        Path(r"C:\Users\kryst\Deployment"),
-        Path(r"C:\Users\kryst\Projects")
-    ]
+    from omni.config import settings
+    
+    workspaces = settings.get_all_workspaces()
     
     results = {}
     total_files = 0

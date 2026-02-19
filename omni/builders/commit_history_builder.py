@@ -99,20 +99,14 @@ class CommitHistoryBuilder:
     """
     
     def __init__(self, infra_root: Path = None):
-        if not HEART_AVAILABLE:
-            # Fallback mode for standalone operation
-            logger.warning(f"⚠️ Federation Heart not available: {_import_error}")
-            logger.warning("   Running in standalone mode with fallback paths")
-            self._cartography = None
-            self.infra_root = infra_root or Path(r"C:\Users\kryst\Infrastructure")
-        else:
-            # Federation mode (preferred)
-            self._cartography = CartographyPillar(infra_root)
-            self.infra_root = self._cartography.get_infrastructure_root()
+        from omni.config import settings
+        
+        self.infra_root = infra_root or settings.get_infrastructure_root()
+        self._cartography = settings.cartography
         
         logger.info(f"📜 CommitHistoryBuilder initialized")
         logger.info(f"   - Infrastructure: {self.infra_root}")
-        logger.info(f"   - Heart Available: {HEART_AVAILABLE}")
+        logger.info(f"   - Heart Available: {settings.heart_available}")
     
     def _get_governance_path(self, subpath: str = "") -> Path:
         """Get governance path using Heart or fallback."""

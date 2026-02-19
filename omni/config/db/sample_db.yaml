@@ -1,0 +1,24 @@
+# Sample Database Configuration for Omni
+# Place this file in:
+#   - omni/config/db/ (project local)
+#   - Infrastructure/config/omni/db/ (global)
+
+name: "sample_db"
+description: "Example project database scan"
+
+connection:
+  type: "postgres"
+  host: "${DB_HOST}"       # Env var resolution supported
+  port: 5432
+  user: "${DB_USER}"
+  password: "${DB_PASSWORD}"
+  database: "postgres"
+
+queries:
+  - name: "public_tables"
+    description: "List all public tables"
+    sql: |
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+    params: []

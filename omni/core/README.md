@@ -100,29 +100,35 @@ In the **Federation Instrument Pattern** (v0.7.0), the Core was refactored to se
 
 Capabilities that were previously in Core have moved to specialized homes:
 
-| Capability | Old Location | New Location |
-|yy----------|--------------|--------------|
-| **Intelligence** | `brain.py`, `librarian.py` | `omni/pillars/intel.py` |
-| **Cartography** | `cartographer.py`, `fetcher.py` | `omni/pillars/cartography.py` |
-| **Gatekeeping** | `provenance.py` | `omni/pillars/gatekeeper.py` |
-| **Rendering** | `renderer.py`, `tree.py` | `omni/lib/renderer.py`, `omni/lib/tree.py` |
-| **Reporting** | `reporting.py` | `omni/lib/reporting.py` |
-| **Requirements** | `requirements.py` | `omni/lib/requirements.py` |
-| **I/O Ops** | `io.py` | `omni/lib/io.py` |
+| Capability       | Old Location                    | New Location                               |
+| ---------------- | ------------------------------- | ------------------------------------------ |
+| **Intelligence** | `brain.py`, `librarian.py`      | `omni/pillars/intel.py`                    |
+| **Cartography**  | `cartographer.py`, `fetcher.py` | `omni/pillars/cartography.py`              |
+| **Gatekeeping**  | `provenance.py`                 | `omni/pillars/gatekeeper.py`               |
+| **Rendering**    | `renderer.py`, `tree.py`        | `omni/lib/renderer.py`, `omni/lib/tree.py` |
+| **Reporting**    | `reporting.py`                  | `omni/lib/reporting.py`                    |
+| **Requirements** | `requirements.py`               | `omni/lib/requirements.py`                 |
+| **I/O Ops**      | `io.py`                         | `omni/lib/io.py`                           |
 
 ### 🐝 Scanners Subsystem
 
 Scanners are no longer a flat list in `core/scanners/`. They are now a **Domain-Driven Plugin System** in `omni/scanners/`.
 
-**Categories:**
-*   `static/` - Filesystem analysis (Docs, Contracts, Deps)
-*   `polyglot/` - Language ecosystems (Node, Rust)
-*   `health/` - Runtime health checks (Federation, Station)
-*   `discovery/` - Structure discovery (Cores, CLI)
-*   `git/` - Git repositories
-*   `fleet/` - Fleet registry generation
+**12 Categories (55 Scanners):**
+*   `static/` — Filesystem analysis (9 scanners)
+*   `architecture/` — Structural enforcement (4 scanners)
+*   `discovery/` — Component cataloging (8 scanners)
+*   `polyglot/` — Language ecosystems (4 scanners)
+*   `library/` — Document intelligence (6 scanners)
+*   `git/` — Repository intelligence (5 scanners)
+*   `search/` — Pattern matching (3 scanners)
+*   `db/` — Database scanning (1 scanner)
+*   `health/` — Runtime health *(Federation-exclusive)* (6 scanners)
+*   `database/` — CMP entities *(Federation-exclusive)* (5 scanners)
+*   `fleet/` — Fleet registry *(Federation-exclusive)* (1 scanner)
+*   `phoenix/` — Git resurrection *(Federation-exclusive)* (3 scanners)
 
-Each category is dynamically loaded via `SCANNER_MANIFEST.yaml`.
+Each category is dynamically loaded via `SCANNER_MANIFEST.yaml`. See [Scanner Architecture Guide](../scanners/README.md).
 
 ---
 
@@ -145,6 +151,6 @@ Registry Truth (governance/)
 
 ---
 
-*Last Updated: February 2, 2026 (v0.7.0)*  
+*Last Updated: February 19, 2026 (v0.7.0)*  
 *Maintained by: The Federation*  
 *Constitutional Authority: Charter V1.2*

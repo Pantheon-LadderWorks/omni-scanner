@@ -1,7 +1,0 @@
-category: fleet
-description: "Fleet registry generators"
-scanners:
-  - name: fleet
-    file: fleet.py
-    function: scan
-    description: "Fleet registry scanner and generator"

@@ -1,0 +1,31 @@
+# Generic Import Constraints
+# Define rules to ban or restrict imports.
+
+name: "safety_checks"
+description: "Basic safety checks for the codebase"
+
+rules:
+  - name: "no_subprocess_shell"
+    description: "Avoid subprocess with shell=True (security risk)"
+    pattern: "subprocess"
+    # Logic: This is hard to check just via import statements (ast.Import), 
+    # but we can ban the module if needed, or specific submodules.
+    # For a simple Import Scanner, we check MODULE names.
+    severity: "warning"
+    # deny: true # If true, any import of this module is flagged
+  
+  - name: "ban_telnet"
+    description: "Telnet is insecure"
+    pattern: "telnetlib"
+    type: "deny"
+    severity: "error"
+
+  - name: "restrict_requests"
+    description: "Use internal HTTP client instead of raw requests"
+    pattern: "requests"
+    type: "restrict"
+    severity: "info"
+    # allowed_scopes: ["clients/", "scripts/"] # Only allowed in these dirs
+    allowed_paths: 
+      - "omni/clients"
+      - "omni/scripts"

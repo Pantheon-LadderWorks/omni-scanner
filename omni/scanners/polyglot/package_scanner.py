@@ -11,6 +11,7 @@ Version: 1.0.0
 import json
 from pathlib import Path
 from typing import Dict, Any, List
+from omni.lib.files import walk_project
 
 
 def scan(target: Path) -> Dict[str, Any]:
@@ -37,12 +38,17 @@ def scan(target: Path) -> Dict[str, Any]:
         }
     """
     target_path = Path(target).resolve()
-    root = target_path if target_path.is_dir() else target_path.parent
     
     packages = []
     
-    # Walk and find package markers
-    for item in root.rglob("*"):
+    # Use standardized project walker for detection
+    # We look for .toml and .py files, then filter for markers
+    if target_path.is_file():
+        candidates = [target_path]
+    else:
+        candidates = walk_project(target_path, extensions={".toml", ".py"})
+        
+    for item in candidates:
         if item.name in ["pyproject.toml", "setup.py"]:
             pkg_info = _extract_package_info(item)
             if pkg_info:
@@ -91,52 +97,55 @@ def _parse_pyproject_toml(file_path: Path) -> Dict[str, Any]:
     """Parse pyproject.toml for package metadata."""
     try:
         import tomli
+        with open(file_path, "rb") as f:
+            data = tomli.load(f)
+        project = data.get("project", {})
+        return {
+            "version": project.get("version", "unknown"),
+            "description": project.get("description", ""),
+            "cli_scripts": project.get("scripts", {})
+        }
     except ImportError:
         # Fallback: manual parsing (limited)
         return _parse_pyproject_manual(file_path)
-    
-    with open(file_path, "rb") as f:
-        data = tomli.load(f)
-    
-    project = data.get("project", {})
-    return {
-        "version": project.get("version", "unknown"),
-        "description": project.get("description", ""),
-        "cli_scripts": project.get("scripts", {})
-    }
+    except Exception:
+        return {"version": "error", "description": "", "cli_scripts": {}}
 
 
 def _parse_pyproject_manual(file_path: Path) -> Dict[str, Any]:
     """Manual TOML parsing (basic, no dependencies)."""
     info = {"version": "unknown", "description": "", "cli_scripts": {}}
     
-    with open(file_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-    
-    in_project = False
-    in_scripts = False
-    
-    for line in lines:
-        line = line.strip()
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
         
-        if line == "[project]":
-            in_project = True
-            in_scripts = False
-        elif line == "[project.scripts]":
-            in_scripts = True
-            in_project = False
-        elif line.startswith("["):
-            in_project = False
-            in_scripts = False
+        in_project = False
+        in_scripts = False
         
-        if in_project and "version" in line and "=" in line:
-            version_str = line.split("=", 1)[1].strip().strip('"\'')
-            info["version"] = version_str
+        for line in lines:
+            line = line.strip()
+            
+            if line == "[project]":
+                in_project = True
+                in_scripts = False
+            elif line == "[project.scripts]":
+                in_scripts = True
+                in_project = False
+            elif line.startswith("["):
+                in_project = False
+                in_scripts = False
+            
+            if in_project and "version" in line and "=" in line:
+                version_str = line.split("=", 1)[1].strip().strip('"\'')
+                info["version"] = version_str
+            
+            if in_scripts and "=" in line and not line.startswith("#"):
+                name, entry = line.split("=", 1)
+                info["cli_scripts"][name.strip()] = entry.strip().strip('"\'')
+    except Exception:
+        pass
         
-        if in_scripts and "=" in line and not line.startswith("#"):
-            name, entry = line.split("=", 1)
-            info["cli_scripts"][name.strip()] = entry.strip().strip('"\'')
-    
     return info
 
 
@@ -144,14 +153,17 @@ def _parse_setup_py(file_path: Path) -> Dict[str, Any]:
     """Parse setup.py for package metadata (basic extraction)."""
     info = {"version": "unknown", "description": "", "cli_scripts": {}}
     
-    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-        content = f.read()
-    
-    # Extract version (simple regex)
-    import re
-    version_match = re.search(r'version\s*=\s*["\']([^"\']+)["\']', content)
-    if version_match:
-        info["version"] = version_match.group(1)
+    try:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        
+        # Extract version (simple regex)
+        import re
+        version_match = re.search(r'version\s*=\s*["\']([^"\']+)["\']', content)
+        if version_match:
+            info["version"] = version_match.group(1)
+    except Exception:
+        pass
     
     return info
 

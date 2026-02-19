@@ -120,19 +120,37 @@ def scan_github(update_registry: bool = True) -> Dict[str, Any]:
         - New repos not in registry
         - Orphaned registry entries
     """
+    from omni.config.settings import get_git_config
+    
+    config = get_git_config()
+    
     print("[GITHUB] Fetching repos via gh CLI...")
     
     # Fetch user repos
-    user_repos = _fetch_github_repos()
-    print(f"  [OK] User repos: {len(user_repos)}")
+    # Use config['users'] if defined, otherwise default to authenticated user
+    target_users = config.get("users", [])
+    if not target_users:
+        # Default behavior: authenticated user
+        user_repos = _fetch_github_repos()
+        print(f"  [OK] Authenticated User: {len(user_repos)} repos")
+    else:
+        user_repos = []
+        for user in target_users:
+            repos = _fetch_github_repos(owner=user)
+            user_repos.extend(repos)
+            print(f"  [OK] User {user}: {len(repos)} repos")
     
     # Fetch org repos
-    orgs = _get_user_orgs()
+    # Use config['orgs'] if defined, otherwise auto-detect
+    target_orgs = config.get("orgs", [])
+    if not target_orgs:
+        target_orgs = _get_user_orgs()
+        
     org_repos = []
-    for org in orgs:
+    for org in target_orgs:
         repos = _fetch_github_repos(owner=org)
         org_repos.extend(repos)
-        print(f"  [OK] {org}: {len(repos)} repos")
+        print(f"  [OK] Org {org}: {len(repos)} repos")
     
     # Combine and dedupe by URL
     all_github_repos = []
@@ -192,66 +210,8 @@ def scan_github(update_registry: bool = True) -> Dict[str, Any]:
     }
 
 
-def _find_git_repos(target: Path) -> List[Path]:
-    """Find all git repositories under target."""
-    repos = []
-    
-    for item in target.rglob(".git"):
-        # Skip if:
-        # 1. Not a directory (could be a .git file in submodules)
-        # 2. Parent path contains .git (nested .git directory - cursed)
-        # 3. Should be skipped by federation cartography
-        if not item.is_dir():
-            continue
-        
-        repo_path = item.parent
-        
-        # Skip inception: .git inside .git
-        if ".git" in str(repo_path.relative_to(target) if repo_path != target else Path(".")):
-            continue
-            
-        if not should_skip_path(repo_path):
-            repos.append(repo_path)
-    
-    return repos
 
-
-def _get_remote_url(repo_path: Path) -> Optional[str]:
-    """
-    Get the remote origin URL for a git repo.
-    
-    Returns normalized GitHub URL or None if no remote/not GitHub.
-    """
-    try:
-        result = subprocess.run(
-            ["git", "remote", "get-url", "origin"],
-            cwd=repo_path,
-            capture_output=True,
-            encoding='utf-8',
-            errors='replace'
-        )
-        
-        if result.returncode != 0:
-            return None
-            
-        url = result.stdout.strip()
-        
-        # Normalize git@github.com:owner/repo.git to https://github.com/owner/repo
-        if url.startswith("git@github.com:"):
-            url = url.replace("git@github.com:", "https://github.com/")
-        
-        # Strip .git suffix
-        if url.endswith(".git"):
-            url = url[:-4]
-            
-        # Only return GitHub URLs
-        if "github.com" in url:
-            return url.lower()
-            
-        return None
-        
-    except Exception:
-        return None
+from omni.scanners.git.git_util import get_remote_url, find_git_repos
 
 
 def scan_local_paths(scan_roots: Optional[List[Path]] = None) -> Dict[str, str]:
@@ -283,10 +243,10 @@ def scan_local_paths(scan_roots: Optional[List[Path]] = None) -> Dict[str, str]:
         if not root.exists():
             continue
             
-        repos = _find_git_repos(root)
+        repos = find_git_repos(root)
         
         for repo_path in repos:
-            remote_url = _get_remote_url(repo_path)
+            remote_url = get_remote_url(repo_path)
             if remote_url:
                 # Store the mapping (first found wins)
                 if remote_url not in url_to_path:
@@ -399,7 +359,7 @@ def scan(target: Path, github: bool = False, update_registry: bool = True) -> Di
     target_path = Path(target).resolve()
     
     # Find all git repos
-    repos = _find_git_repos(target_path)
+    repos = find_git_repos(target_path)
     
     # Get status for each
     items = []

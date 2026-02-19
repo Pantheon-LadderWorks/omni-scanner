@@ -51,27 +51,21 @@ def scan(target: Path) -> dict:
             results["metadata"]["federation_available"] = is_federation_available()
             return results
         
-        # Define exclusion patterns
-        exclude_patterns = [
-            r"__pycache__",
-            r"\.git",
-            r"node_modules",
-            r"\.venv",
-            r"venv",
-            r"archive",
-            r"backup",
-            r"test_.*_core\.py$",  # Exclude test files
-        ]
+
+        # Scan for *_core.py files using shared utility
+        from omni.lib.files import walk_project
         
-        # Scan for *_core.py files
         core_files = []
-        for core_file in infra_root.rglob("*_core.py"):
-            # Skip excluded paths
-            rel_path = str(core_file.relative_to(infra_root))
-            if any(re.search(pattern, rel_path) for pattern in exclude_patterns):
-                continue
-            
-            core_files.append(core_file)
+        # extensions=None because we want specific pattern matching, not just extension
+        for file_path in walk_project(infra_root, extensions=['.py']):
+            if file_path.name.endswith("_core.py"):
+                # Check exclusion patterns manually since walk_project handles dirs but not file patterns
+                # Actually walk_project handles standard dir excludes. 
+                # We just need to check the file name pattern.
+                if "test_" in file_path.name:
+                    continue
+                    
+                core_files.append(file_path)
         
         # Categorize cores
         for core_file in core_files:

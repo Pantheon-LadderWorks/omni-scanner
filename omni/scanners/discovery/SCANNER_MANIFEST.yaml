@@ -33,6 +33,9 @@ scanners:
       - "Find all MCP servers across Infrastructure/Workspace/Deployment/Projects"
       - "Auto-catalog servers for governance registry updates"
       - "Discover scattered servers (languages/, applications/, memory-substrate/)"
-      - "Count total tools available across Federation MCP ecosystem"
+  - name: census
+    file: census.py
+    function: scan
+    description: "File census by dimensional slicing (extensions, sizes, workspaces)"
 
 

@@ -5,6 +5,7 @@ Analyzes package.json for Federation-wide dependency tracking
 from pathlib import Path
 import json
 from typing import Dict, List, Any
+from omni.lib.files import walk_project
 
 
 def scan(target: Path) -> dict:
@@ -33,12 +34,29 @@ def scan(target: Path) -> dict:
         }
     }
     
-    # Find package.json
-    pkg_json = target / "package.json" if target.is_dir() else target
-    
-    if not pkg_json.exists() or pkg_json.name != "package.json":
-        return results
-    
+    # Walk project to find all package.json files
+    # If target is a file, use it directly
+    target_path = Path(target)
+    if target_path.is_file():
+        candidates = [target_path] if target_path.name == "package.json" else []
+    else:
+        # Use standardized project walker (excludes node_modules, etc.)
+        candidates = walk_project(target_path, extensions={".json"})
+        
+    for pkg_json in candidates:
+        if pkg_json.name != "package.json":
+            continue
+            
+        try:
+            _process_package_json(pkg_json, results)
+        except Exception as e:
+            # Skip malformed files, but log if verbose (not implemented here)
+            pass
+            
+    return results
+
+
+def _process_package_json(pkg_json: Path, results: Dict):
     try:
         with open(pkg_json, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -103,20 +121,18 @@ def scan(target: Path) -> dict:
         package_info["federation_markers"] = federation_markers
         
         # Update summary
-        results["summary"]["total_deps"] = len(dependencies)
-        results["summary"]["total_dev_deps"] = len(dev_dependencies)
-        results["summary"]["total_peer_deps"] = len(peer_dependencies)
-        results["summary"]["scripts_count"] = len(scripts)
-        results["summary"]["federation_markers"] = federation_markers
+        results["summary"]["total_deps"] += len(dependencies)
+        results["summary"]["total_dev_deps"] += len(dev_dependencies)
+        results["summary"]["total_peer_deps"] += len(peer_dependencies)
+        results["summary"]["scripts_count"] += len(scripts)
+        results["summary"]["federation_markers"].extend(federation_markers)
         
         # Add to items
         results["items"].append(package_info)
-        results["count"] = 1
+        results["count"] += 1
         
     except (json.JSONDecodeError, FileNotFoundError, PermissionError) as e:
         results["metadata"]["error"] = f"Failed to parse package.json: {str(e)}"
-    
-    return results
 
 
 def extract_deep_dependencies(target: Path) -> Dict[str, Any]:

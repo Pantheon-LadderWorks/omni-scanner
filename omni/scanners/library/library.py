@@ -187,22 +187,19 @@ def scan(target, pattern: str = "**/*", extensions: set = None) -> Dict:
     
     files = []
     
-    # Use glob for pattern matching (more flexible than os.walk)
-    for file_path in target.glob(pattern):
-        # Skip excluded directories
-        if any(excluded in file_path.parts for excluded in EXCLUDED_DIRS):
-            continue
-        
+    # Use standardized project walker
+    from omni.lib.files import walk_project
+    
+    for file_path in walk_project(target):
         # Filter by extension
         if file_path.suffix.lower() not in extensions:
             continue
             
-        if file_path.is_file():
-            try:
-                metadata = get_file_metadata(file_path)
-                files.append(metadata)
-            except Exception as e:
-                print(f"⚠️ Error scanning {file_path}: {e}")
+        try:
+            metadata = get_file_metadata(file_path)
+            files.append(metadata)
+        except Exception as e:
+            print(f"⚠️ Error scanning {file_path}: {e}")
     
     # Sort by date (newest first)
     files.sort(key=lambda x: x["date"], reverse=True)

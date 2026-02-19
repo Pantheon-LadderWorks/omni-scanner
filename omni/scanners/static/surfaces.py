@@ -4,56 +4,29 @@ from pathlib import Path
 
 from omni.core import config
 from omni.core.paths import should_skip_path
+from omni.lib.files import walk_project
 
 # --- CONFIGURATION ---
 # Load from config or fall back to defaults
 conf = config.load_config()
 scan_conf = conf.get("scan", {})
-GLOBAL_EXCLUDES = {
-    "dirs": scan_conf.get("exclude", []),
-    "phrases": [
-        "site-packages", 
-        "superseded",
-        "backup", 
-        "deprecated",
-        "_old",
-        "dungeon-map-mlp", 
-        "sw.js",
-        "governance/registry/surfaces",  # Don't scan previous scan results!
-        "omni/artifacts"  # Don't scan Omni's own output
-    ]
-}
 
-CONTRACT_FAMILIES = {
-    "mcp": {
-        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\mcp\C-MCP-BASE-001.md",
-        "status": "partial" 
-    },
-    "http": {
-        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\http\C-HTTP-BASE-001.md",
-        "status": "partial" 
-    },
-    "cli": {
-        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\cli\C-CLI-BASE-001.md",
-        "status": "partial"
-    },
-    "bus_topic": {
-        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\system\C-SYS-BUS-001_Quadruplet_Crown_Bus.md",
-        "status": "partial"
-    },
-    "db": {
-        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\db\C-DB-BASE-001.md",
-        "status": "partial"
-    },
-    "doc": { 
-        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\artifacts\C-ARTIFACT-BASE-001.md",
-        "status": "partial"
-    },
-    "ui_integration": {
-        "ref": r"C:\Users\kryst\Infrastructure\governance\contracts\ui\C-UI-BASE-001.md",
-        "status": "partial"
-    }
-}
+# Additional phrase excludes not covered by standard walk_project
+PHRASE_EXCLUDES = [
+    "site-packages", 
+    "superseded",
+    "backup", 
+    "deprecated",
+    "_old",
+    "dungeon-map-mlp", 
+    "sw.js",
+    "governance/registry/surfaces",
+    "omni/artifacts"
+]
+
+from omni.config import settings
+
+CONTRACT_FAMILIES = settings.get_contract_map()
 
 PATTERNS = {
     "http": [
@@ -97,21 +70,20 @@ PATTERNS = {
 def check_project_contracts(project_path_str: str):
     contracts = {"openapi": False, "contracts_dir": False, "system_contract": False}
     
-    # SYSTEM CONTRACT CHECK (Hardcoded known system paths map to projects)
-    if "orchestration" in project_path_str.lower():
-         if os.path.exists(r"C:\Users\kryst\Infrastructure\governance\contracts\system\C-SYS-ORCH-001_UCOE_Core.md"):
-             contracts["system_contract"] = True
-    
     if os.path.exists(project_path_str):
-        for f in os.listdir(project_path_str):
-            if f.lower() in ['openapi.yaml', 'openapi.json', 'swagger.yaml', 'swagger.json']:
-                contracts["openapi"] = True
-            if f.lower() in ['contracts', 'schemas'] and os.path.isdir(os.path.join(project_path_str, f)):
-                contracts["contracts_dir"] = True
-            if f == "CONTRACT.md":
-                contracts["contracts_dir"] = True 
-            if f.lower() in ['contracts.py', 'protocols.py']:
-                contracts["contracts_dir"] = True
+        # Shallow check of project root
+        try:
+            for f in os.listdir(project_path_str):
+                if f.lower() in ['openapi.yaml', 'openapi.json', 'swagger.yaml', 'swagger.json']:
+                    contracts["openapi"] = True
+                if f.lower() in ['contracts', 'schemas'] and os.path.isdir(os.path.join(project_path_str, f)):
+                    contracts["contracts_dir"] = True
+                if f == "CONTRACT.md":
+                    contracts["contracts_dir"] = True 
+                if f.lower() in ['contracts.py', 'protocols.py']:
+                    contracts["contracts_dir"] = True
+        except OSError:
+            pass
     return contracts
 
 def scan(target: Path) -> dict:
@@ -132,91 +104,84 @@ def scan(target: Path) -> dict:
     # Check Contracts
     contract_meta = check_project_contracts(project_path_str)
     
-    # Walk
-    for root, dirs, files in os.walk(surface_root):
-        root_path = Path(root)
+    # Standardized Walk
+    extensions = {'.py', '.js', '.ts', '.go', '.rs', '.java'}
+    for file_path in walk_project(surface_root, extensions=extensions):
         
-        # Skip paths using federation cartography
-        if should_skip_path(root_path):
-            dirs[:] = []  # Don't descend
+        # Skip paths using federation cartography (legacy check, but good to keep)
+        if should_skip_path(file_path.parent):
             continue
             
-        # Excludes
-        dirs[:] = [d for d in dirs if d not in GLOBAL_EXCLUDES['dirs'] and not d.startswith('.')]
-        
-        for file in files:
-            if not file.endswith(('.py', '.js', '.ts', '.go', '.rs', '.java')):
-                continue
+        # Phrase Excludes
+        # Normalize path for check
+        rel_path = str(file_path).replace("\\", "/")
+        if any(p in rel_path for p in PHRASE_EXCLUDES):
+            continue
+            
+        # Scan Content
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
                 
-            file_path = os.path.join(root, file)
-            # Phrase Excludes
-            if any(p in file_path.replace("\\", "/") for p in GLOBAL_EXCLUDES["phrases"]):
-                continue
-                
-            # Scan Content
-            try:
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    content = f.read()
-                    
-                for kind, regexes in PATTERNS.items():
-                    for regex in regexes:
-                        matches = re.finditer(regex, content)
-                        for match in matches:
-                            lineno = content[:match.start()].count('\n') + 1
-                            
-                            # Heuristics & Status (Migrated)
-                            contract_status = "missing"
-                            
-                            if kind == 'http' and contract_meta['openapi']:
-                                contract_status = "partial" # Upgrade logic below
-                            if kind == 'mcp' and ('inputSchema' in content or 'outputSchema' in content):
+            for kind, regexes in PATTERNS.items():
+                for regex in regexes:
+                    matches = re.finditer(regex, content)
+                    for match in matches:
+                        lineno = content[:match.start()].count('\n') + 1
+                        
+                        # Heuristics & Status (Migrated)
+                        contract_status = "missing"
+                        
+                        if kind == 'http' and contract_meta['openapi']:
+                            contract_status = "partial" # Upgrade logic below
+                        if kind == 'mcp' and ('inputSchema' in content or 'outputSchema' in content):
+                            contract_status = "partial"
+                        if kind == 'bus_topic' and 'crown://' in match.group(0):
                                 contract_status = "partial"
-                            if kind == 'bus_topic' and 'crown://' in match.group(0):
-                                 contract_status = "partial"
-                            if "contracts" in file_path or "schema" in file_path:
-                                contract_status = "exists"
-                                
-                            if contract_meta['contracts_dir'] or contract_meta['system_contract']:
-                                if contract_status == "missing":
-                                    contract_status = "partial"
+                        if "contracts" in str(file_path) or "schema" in str(file_path):
+                            contract_status = "exists"
                             
-                            # Family Linking
-                            contract_ref = None
-                            if kind in CONTRACT_FAMILIES:
-                                fam = CONTRACT_FAMILIES[kind]
-                                if contract_status == 'missing':
-                                    contract_status = fam['status']
-                                contract_ref = fam['ref']
-                                
-                            # Special Upgrade Logic
-                            if kind == 'http' and contract_meta['openapi']:
-                                contract_status = 'exists'
+                        if contract_meta['contracts_dir'] or contract_meta['system_contract']:
+                            if contract_status == "missing":
+                                contract_status = "partial"
+                        
+                        # Family Linking
+                        contract_ref = None
+                        if kind in CONTRACT_FAMILIES:
+                            fam = CONTRACT_FAMILIES[kind]
+                            if contract_status == 'missing':
+                                contract_status = fam['status']
+                            contract_ref = fam['ref']
                             
-                            # Scribe Anvil Hack
-                            if "scribes-anvil" in project_name.lower() and kind == 'mcp':
-                                contract_ref = f"{CONTRACT_FAMILIES['mcp']['ref']} + C-MCP-SCRIBE-001"
-                                contract_status = "exists"
+                        # Special Upgrade Logic
+                        if kind == 'http' and contract_meta['openapi']:
+                            contract_status = 'exists'
+                        
+                        # Scribe Anvil Hack
+                        if "scribes-anvil" in project_name.lower() and kind == 'mcp':
+                            contract_ref = f"{CONTRACT_FAMILIES['mcp']['ref']} + C-MCP-SCRIBE-001"
+                            contract_status = "exists"
 
-                            # Scope
-                            scope = "internal"
-                            if "external-frameworks" in str(target) or "external" in project_name: # simplified
-                                scope = "external_reference"
-                            if "Serena" in project_name:
-                                scope = "external_reference"
+                        # Scope
+                        scope = "internal"
+                        if "external-frameworks" in str(target) or "external" in project_name: # simplified
+                            scope = "external_reference"
+                        if "Serena" in project_name:
+                            scope = "external_reference"
 
-                            found_surfaces.append({
-                                "surface_id": f"{project_name}:{file}:{kind}:{lineno}",
-                                "kind": kind,
-                                "project": project_name,
-                                "location": f"{file}:{lineno}",
-                                "status": contract_status,
-                                "ref": contract_ref,
-                                "scope": scope
-                            })
-                            break # One match per kind per file is enough usually
-                            
-            except Exception:
-                pass
+                        found_surfaces.append({
+                            "surface_id": f"{project_name}:{file_path.name}:{kind}:{lineno}",
+                            "kind": kind,
+                            "project": project_name,
+                            "location": f"{file_path.name}:{lineno}",
+                            "status": contract_status,
+                            "ref": contract_ref,
+                            "scope": scope
+                        })
+                        break # One match per kind per file is enough usually
+                        
+        except Exception:
+            pass
 
     # Semantic Organization
     organized = _organize_surfaces(found_surfaces)

@@ -33,3 +33,7 @@ scanners:
     file: events.py
     function: scan
     description: "Scans for event schema definitions"
+  - name: imports_check
+    file: generic_imports.py
+    function: scan
+    description: "Config-driven import bans/restrictions"

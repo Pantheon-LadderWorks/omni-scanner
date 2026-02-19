@@ -4,6 +4,7 @@ Analyzes Cargo.toml for Federation-wide Rust dependency tracking
 """
 from pathlib import Path
 from typing import Dict, List, Any
+from omni.lib.files import walk_project
 
 
 def scan(target: Path) -> dict:
@@ -32,12 +33,27 @@ def scan(target: Path) -> dict:
         }
     }
     
-    # Find Cargo.toml
-    cargo_toml = target / "Cargo.toml" if target.is_dir() else target
-    
-    if not cargo_toml.exists() or cargo_toml.name != "Cargo.toml":
-        return results
-    
+    # Walk project to find all Cargo.toml files
+    target_path = Path(target)
+    if target_path.is_file():
+        candidates = [target_path] if target_path.name == "Cargo.toml" else []
+    else:
+        # Use standardized project walker
+        candidates = walk_project(target_path, extensions={".toml"})
+        
+    for cargo_toml in candidates:
+        if cargo_toml.name != "Cargo.toml":
+            continue
+            
+        try:
+            _process_cargo_toml(cargo_toml, results)
+        except Exception as e:
+            pass
+            
+    return results
+
+
+def _process_cargo_toml(cargo_toml: Path, results: Dict):
     try:
         # Parse TOML manually (avoid toml dependency for now)
         with open(cargo_toml, 'r', encoding='utf-8') as f:
@@ -99,20 +115,18 @@ def scan(target: Path) -> dict:
         crate_info["federation_markers"] = federation_markers
         
         # Update summary
-        results["summary"]["total_deps"] = len(dependencies)
-        results["summary"]["total_dev_deps"] = len(dev_dependencies)
-        results["summary"]["total_build_deps"] = len(build_dependencies)
-        results["summary"]["workspace_members"] = len(workspace_members)
-        results["summary"]["federation_markers"] = federation_markers
+        results["summary"]["total_deps"] += len(dependencies)
+        results["summary"]["total_dev_deps"] += len(dev_dependencies)
+        results["summary"]["total_build_deps"] += len(build_dependencies)
+        results["summary"]["workspace_members"] += len(workspace_members)
+        results["summary"]["federation_markers"].extend(federation_markers)
         
         # Add to items
         results["items"].append(crate_info)
-        results["count"] = 1
+        results["count"] += 1
         
     except (FileNotFoundError, PermissionError) as e:
         results["metadata"]["error"] = f"Failed to parse Cargo.toml: {str(e)}"
-    
-    return results
 
 
 def extract_toml_value(content: str, key: str) -> str:

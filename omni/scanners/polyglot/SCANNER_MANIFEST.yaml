@@ -12,4 +12,8 @@ scanners:
   - name: packages
     file: package_scanner.py
     function: scan
-    description: "Multi-language package scanner"
+    description: "Scans Python projects (pyproject.toml, setup.py)"
+  - name: generic
+    file: generic.py
+    function: scan
+    description: "Scans Go, Java, .NET, Docker, Terraform projects"

@@ -455,6 +455,8 @@ class RegistryBuilder:
                 return items
             else:
                 logger.warning("   ⚠️ CMP query returned 0 items")
+        except ImportError:
+            logger.info("   ℹ️ CMP scanner not found (Open Source Mode)")
         except Exception as e:
             logger.warning(f"   ⚠️ CMP live query failed: {e}")
         
@@ -592,6 +594,17 @@ class RegistryBuilder:
             Dict of { 'local_path_lowercase_fwd_slash': import_file_count }
         """
         try:
+            from omni.lib.files import walk_project
+            # Naive python scan if rg is missing, or just rely on what we have.
+            # actually, let's keep it simple for now. 
+            # If we don't have rg, we might skip this heavily intensive task in python
+            
+            # Check if rg is available
+            import shutil
+            if not shutil.which("rg"):
+                logger.info("   ℹ️ 'rg' (ripgrep) not found - skipping deep integration scan.")
+                return {}
+
             result = subprocess.run(
                 ["rg", "-l", "--no-ignore", "-g", "*.py",
                  "from federation_heart", str(self.infra_root)],
@@ -617,24 +630,15 @@ class RegistryBuilder:
                         pass
             
             # Now load the registry's known local_paths to map files -> projects
-            # We need to read from our settings to get all project paths
-            import yaml
-            registry_path = self.settings.get_governance_path(
-                "registry/projects/PROJECT_REGISTRY_V1.yaml"
-            )
-            
-            # Build a lookup from directory -> project_path
-            # Using the local_path_map from _scan_local_paths would be circular,
-            # so we use the current CMP data's github URLs mapped to local paths
-            # Instead, let's directly map: for each heart_file, find which 
-            # known workspace directory it belongs to
+            # ... rest of logic ...
             
             # Get all workspace roots
             try:
                 from omni.config.settings import get_all_workspaces
                 scan_roots = get_all_workspaces()
             except ImportError:
-                scan_roots = [self.infra_root]
+                 from omni.config import settings
+                 scan_roots = [settings.get_infrastructure_root()] # Fallback
             
             # Find all git repos to build a path -> project_dir map
             from omni.scanners.git.git import _find_git_repos
@@ -671,9 +675,9 @@ class RegistryBuilder:
             logger.info(f"   🔍 Heart scan: {len(heart_files)} files import Heart, across {len(path_to_count)} project dirs")
             return path_to_count
             
-        except FileNotFoundError:
-            logger.warning("   ⚠️ ripgrep (rg) not found, skipping heart integration scan")
-            return {}
+        except ImportError:
+             logger.warning("   ⚠️ Required modules for heart scan not found.")
+             return {}
         except Exception as e:
             logger.warning(f"   ⚠️ Heart integration scan failed: {e}")
             return {}

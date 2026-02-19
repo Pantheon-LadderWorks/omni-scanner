@@ -101,12 +101,8 @@ def search_pattern(
         }
     
     # Default exclusions
-    default_exclusions = [
-        '*.pyc', '__pycache__', '.git', '.venv', 'node_modules',
-        '*.min.js', '*.map', '.next', 'dist', 'build', '.omni'
-    ]
-    exclude_patterns = exclude_patterns or []
-    all_exclusions = default_exclusions + exclude_patterns
+    # Standardized file walker (handles exclusions automatically)
+    from omni.lib.files import walk_project
     
     matches = []
     files_scanned = 0
@@ -114,13 +110,7 @@ def search_pattern(
     truncated = False
     
     # Scan all text files
-    for file_path in target_path.rglob('*'):
-        if not file_path.is_file():
-            continue
-        
-        # Check exclusions
-        if any(file_path.match(pattern) for pattern in all_exclusions):
-            continue
+    for file_path in walk_project(target_path):
         
         # Skip binary files
         mime_type, _ = mimetypes.guess_type(str(file_path))

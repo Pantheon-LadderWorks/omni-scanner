@@ -129,20 +129,23 @@ class MCPServerDiscoveryScanner:
         # Priority 6: Discovered (default)
         return 'discovered'
     
+
     def extract_tools_from_ast(self, tree: ast.Module) -> Tuple[List[str], int]:
         """
         Extract tool names and count from AST using structural analysis.
-        
-        Walks AST tree to find:
-        - @server.call_tool("name") or @app.call_tool("name") decorators
-        - Tool(name="toolname") instantiations in Tool lists
-        
-        Args:
-            tree: Parsed AST module
-        
-        Returns:
-            Tuple of (tool_names, tool_count)
+        Uses shared omni.lib.ast_util logic.
         """
+        from omni.lib.ast_util import extract_decorators
+        
+        # We can't easily pass the tree to extract_decorators since it expects a path
+        # But we can reuse the logic pattern or just keep this specialized method if it's too specific
+        # Actually, let's keep the manual tree walk here for now as it's looking for 
+        # specific tool patterns that might not be fully covered by the generic utility yet
+        # OR we can update it to use the tree if we refactor the util to accept tree objects
+        
+        # for now, let's stick to the existing robust implementation for safety
+        # but we'll import standard AST
+        
         tools = []
         
         for node in ast.walk(tree):

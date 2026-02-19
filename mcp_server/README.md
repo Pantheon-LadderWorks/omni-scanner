@@ -6,7 +6,7 @@
 
 ## Overview
 
-The Omni MCP server provides AI agents with **direct perception** of the Federation filesystem through 41+ scanners across 10 categories.
+The Omni MCP server provides AI agents with **direct perception** of the Federation filesystem through **55 scanners across 12 categories**.
 
 **Philosophy**: "Never trust documentation, trust reality." — ACE  
 **Tone**: Encouraging excitement, NOT aggressive bullying! 💖✨
@@ -131,7 +131,7 @@ After STAGE 1 (Scanner Registry):
  📚
 
 Saved in `.omni/memories/` directory **in the target you're learning**:
-- `scanner_registry_guide.md` - The 10 categories and introspection
+- `scanner_registry_guide.md` - The 12 categories and introspection
 - `physical_layer_guide.md` - The Body (inventory, duplicates, ghosts)
 - `cognitive_layer_guide.md` - The Mind (content, graph, rituals, cohesion)
 - `ace_mandate.md` - ACE's architecture philosophy
@@ -143,7 +143,7 @@ Saved in `.omni/memories/` directory **in the target you're learning**:
 ## Memory Files
 
 Saved in `.omni_memories/` directory:
-- `scanner_registry_guide.md` - The 9 categories and introspection
+- `scanner_registry_guide.md` - The 12 categories and introspection
 - `physical_layer_guide.md` - The Body (inventory, duplicates, ghosts)
 - `cognitive_layer_guide.md` - The Mind (content, graph, rituals, cohesion)
 - `ace_mandate.md` - ACE's architecture philosophy

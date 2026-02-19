@@ -1,547 +1,247 @@
-# 🔍 Omni Scanner Registry
+# 🔍 Omni Scanner Architecture Guide
 
-**Location:** `omni/core/scanners/`  
-**Purpose:** Modular scanner plugins for static and runtime analysis  
-**Version:** 0.5.0  
-**Status:** Living Plugin System
+> *"55 instruments. 12 categories. One universal contract."*
+
+The Sensorium is Omni's perception layer — a modular, plugin-based system of scanners that observe codebases without modifying them. Every scanner implements a single contract, is auto-discovered at startup, and can be invoked via CLI or MCP.
 
 ---
 
-## 🎯 Scanner Architecture
+## The Universal Contract
 
-Each scanner is a self-contained module that implements the standard interface:
+Every scanner implements this interface:
 
 ```python
-from pathlib import Path
-
 def scan(target: Path) -> dict:
     """
-    Scanner implementation.
+    Observe the target directory. Return structured findings.
     
-    Args:
-        target: Path to scan (file or directory)
-        
+    Contract: C-TOOLS-OMNI-SCANNER-001
+    - Read-only: Never modify source files
+    - Safe failure: Return empty results on error, don't crash
+    - Deterministic: Same input → same output
+    
     Returns:
-        dict with standard keys:
-        - count: int - Number of findings
-        - items: list - Found items
-        - metadata: dict - Scanner-specific metadata
+        {
+            "scanner": "scanner_name",
+            "category": "category_name",
+            "target": str(target),
+            "timestamp": "ISO-8601",
+            "count": int,
+            "items": [...]  # Scanner-specific findings
+        }
     """
-    return {
-        "count": 0,
-        "items": [],
-        "metadata": {}
-    }
 ```
 
 ---
 
-## 📋 Static Scanners (Filesystem)
+## Scanner Categories
 
-### `surfaces.py` 🌐
-- **Category:** Interface Detection
-- **Purpose:** Discovers API surfaces, routes, and integration points
-- **Detects:**
-  - HTTP endpoints (`@app.get`, `@app.post`, router patterns)
-  - MCP tools (`@mcp.tool`, `ListToolsRequest`)
-  - CLI entry points (`if __name__ == "__main__"`, Click, Typer, argparse)
-  - Crown Bus topics (`publish()`, `subscribe()`, `crown://`)
-  - Database models (`class Model`, `CREATE TABLE`)
-  - UI integrations (`fetch()`, `axios.`)
-- **Contract Families:**
-  - `mcp` → C-MCP-BASE-001.md
-  - `http` → C-HTTP-BASE-001.md
-  - `cli` → C-CLI-BASE-001.md
-  - `bus_topic` → C-SYS-BUS-001.md
-  - `db` → C-DB-BASE-001.md
-  - `ui_integration` → C-UI-BASE-001.md
-- **Output:** Surface inventory with contract compliance mapping
-- **Use Case:** API documentation, contract verification
+### Open Source (Included in Build)
 
----
+|   #   | Category           | Count | Description                                                                 | README                              |
+| :---: | :----------------- | :---: | :-------------------------------------------------------------------------- | :---------------------------------- |
+|   1   | 📁 **Static**       |   9   | Filesystem analysis — contracts, deps, docs, events, hooks, surfaces, UUIDs | [→ Details](static/README.md)       |
+|   2   | 🏗️ **Architecture** |   4   | Structural enforcement — import boundaries, coupling, drift, compliance     | [→ Details](architecture/README.md) |
+|   3   | 🔎 **Discovery**    |   8   | Component cataloging — projects, CLI, MCP servers, archives, census         | [→ Details](discovery/README.md)    |
+|   4   | 🌐 **Polyglot**     |   4   | Language ecosystems — Python, Node.js, Rust, Go/Java/.NET/Docker            | [→ Details](polyglot/README.md)     |
+|   5   | 📚 **Library**      |   6   | Document intelligence — cohesion, content depth, knowledge graphs           | [→ Details](library/README.md)      |
+|   6   | 🔀 **Git**          |   5   | Repository intelligence — status, velocity, PR telemetry, history           | [→ Details](git/README.md)          |
+|   7   | 🔍 **Search**       |   3   | Pattern matching — file, text, and regex search with context                | [→ Details](search/README.md)       |
+|   8   | 🗄️ **DB**           |   1   | Configuration-driven database scanning                                      | [→ Details](db/README.md)           |
 
-### `contracts.py` 📜
-- **Category:** Contract Discovery
-- **Purpose:** Finds explicit contract definitions
-- **Detects:**
-  - `CONTRACT.md` files
-  - `openapi.json` / `openapi.yaml` specs
-- **Output:** List of contract files found
-- **Use Case:** Contract enforcement, API spec validation
+### Federation-Exclusive (Not in Open Source Build)
+
+> These categories require the Federation Heart backend. They are fully functional when the Heart is installed but are not distributed with the open-source release.
+
+|   #   | Category       | Count | Description                                                                  | README                          |
+| :---: | :------------- | :---: | :--------------------------------------------------------------------------- | :------------------------------ |
+|   9   | 🛡️ **Health**   |   6   | Runtime health — Federation, CMP, pillar, station, tunnel status             | [→ Details](health/README.md)   |
+|  10   | 🗃️ **Database** |   5   | CMP entity scanning — agents, artifacts, conversations, entities, projects   | [→ Details](database/README.md) |
+|  11   | ⚓ **Fleet**    |   1   | Fleet registry generation and validation                                     | [→ Details](fleet/README.md)    |
+|  12   | 🔥 **Phoenix**  |   3   | Git history resurrection — archive scanning, orphan detection, temporal gaps | [→ Details](phoenix/README.md)  |
+
+**Total: 55 scanners across 12 categories** (40 open source + 15 Federation-exclusive)
 
 ---
 
-### `docs.py` 📚
-- **Category:** Documentation Discovery
-- **Purpose:** Finds documentation files
-- **Detects:**
-  - README files (`.md`, `.txt`, `.rst`)
-  - Documentation directories
-  - Markdown files
-- **Output:** Documentation inventory
-- **Use Case:** Documentation completeness audits
+## Plugin System
 
----
+### Auto-Discovery
 
-### `deps.py` 📦
-- **Category:** Dependency Discovery
-- **Purpose:** Finds dependency declaration files
-- **Detects:**
-  - `package.json` (Node.js)
-  - `requirements.txt` (Python)
-  - `pyproject.toml` (Python)
-  - `Gemfile` (Ruby)
-  - `go.mod` (Go)
-  - `Cargo.toml` (Rust)
-- **Output:** List of dependency files
-- **Use Case:** Dependency auditing, polyglot analysis
-- **Note:** Detection only - use `requirements.py` core module for deep Python analysis
+Scanners are discovered at runtime by `omni/scanners/__init__.py`:
 
----
-
-### `tools.py` 🛠️
-- **Category:** CLI Tool Discovery
-- **Purpose:** Finds installable command-line tools
-- **Detects:**
-  - `pyproject.toml` `[project.scripts]` (Python)
-  - `pyproject.toml` `[tool.poetry.scripts]` (Poetry)
-  - `package.json` `"bin"` (Node.js)
-  - `setup.py` `entry_points` (Legacy Python)
-- **Output:** List of installable tools with language
-- **Use Case:** Tool inventory, CLI documentation
-
----
-
-### `uuids.py` 🔑
-- **Category:** Identity Tracking
-- **Purpose:** Finds UUID usage in codebase
-- **Detects:**
-  - UUID declarations
-  - UUID references
-  - UUID patterns in code/config
-- **Output:** UUID usage inventory
-- **Use Case:** UUID provenance, identity auditing
-- **Integration:** Works with `provenance.py` core module
-
----
-
-### `events.py` 📡
-- **Category:** Event Emission Detection
-- **Purpose:** Maps event publishers and subscribers
-- **Detects:**
-  - `.publish()` calls
-  - `.emit()` calls
-  - `crown://` URIs
-  - Event topic declarations
-- **Patterns:** Configurable via `omni.yml`
-  ```yaml
-  scan:
-    patterns:
-      generic_events:
-        - "\\.publish\\("
-        - "crown://"
-  ```
-- **Output:** Event emission inventory with topics
-- **Use Case:** Event bus mapping, Crown Bus documentation
-- **Integration:** Generates `EVENT_REGISTRY.yaml` via `registry_events.py`
-
----
-
-### `hooks.py` 🪝
-- **Category:** Hook Detection
-- **Purpose:** Finds lifecycle hooks and callbacks
-- **Detects:**
-  - Git hooks (`.git/hooks/`)
-  - Pre-commit hooks
-  - Post-deploy hooks
-  - Lifecycle callbacks in code
-- **Output:** Hook inventory
-- **Use Case:** Automation auditing, lifecycle documentation
-
----
-
-### `git.py` 🔀 *(New in v0.6.1)*
-- **Category:** Repository Health
-- **Purpose:** Scans git repositories for status and health
-- **Detects:**
-  - Dirty/clean status
-  - Uncommitted changes count
-  - Ahead/behind remote counts
-  - Current branch
-  - Repository health classification (clean, dirty, unpushed, etc.)
-- **Output:** Git status inventory with health grades
-- **Use Case:** Repository hygiene, fleet-wide git status, **GitHub Guild integration**
-
----
-
-### `fleet.py` 🛰️ *(New in v0.6.1)*
-- **Category:** Station Fleet Analysis
-- **Purpose:** Scans station fleet configurations and health
-- **Detects:**
-  - Registered stations
-  - Fleet configuration files
-  - Station health status
-- **Integration:** Uses `fleet_configs/` configuration modules
-- **Output:** Fleet status inventory
-- **Use Case:** Station fleet monitoring, satellite discovery
-
----
-
-### `cli.py` + `cli_edge_scanner.py` ⌨️ *(New in v0.6.1)*
-- **Category:** CLI Edge Detection
-- **Purpose:** Discovers CLI entry points and command structures
-- **Detects:**
-  - Typer/Click commands
-  - argparse patterns
-  - Entry point scripts
-- **Output:** CLI command inventory
-- **Use Case:** CLI documentation, command discovery
-
----
-
-### `cores.py` 🧠 *(New in v0.6.1)*
-- **Category:** Core Analysis
-- **Purpose:** Analyzes core module structure
-- **Detects:**
-  - Core module patterns
-  - Architecture analysis
-- **Output:** Core module inventory
-- **Use Case:** Architecture documentation
-
----
-
-### `library.py` 📚 *(New in v0.6.1)*
-- **Category:** Library Analysis
-- **Purpose:** Discovers and analyzes project libraries
-- **Detects:**
-  - Library definitions
-  - Shared modules
-- **Output:** Library inventory
-- **Use Case:** Dependency mapping, shared code discovery
-
----
-
-### `canon.py` 📜 *(New in v0.6.1)*
-- **Category:** Constitutional Compliance
-- **Purpose:** Scans CodeCraft canon lock files and validates compliance
-- **Detects:**
-  - canon.lock.yaml files
-  - Canon partition compliance
-  - Executor registration
-- **Output:** Canon compliance report
-- **Use Case:** Constitutional verification, canon auditing
-
----
-
-## 🎮 Scanner Plugin System
-
-### Registry (`__init__.py`)
-
-All scanners are registered in the `SCANNERS` dict:
+1. Walk all subdirectories of `omni/scanners/`
+2. Look for `SCANNER_MANIFEST.yaml` in each directory
+3. Parse manifest entries (name, file, function, description)
+4. Dynamically import each scanner module
+5. Register the `scan()` function in the global `SCANNERS` dictionary
 
 ```python
-from . import surfaces, docs, deps, contracts, tools, uuids, events, hooks
+from omni.scanners import SCANNERS, SCANNER_CATEGORIES
 
-SCANNERS = {
-    "surfaces": surfaces.scan,
-    "events": events.scan,
-    "docs": docs.scan,
-    "deps": deps.scan,
-    "contracts": contracts.scan,
-    "tools": tools.scan,
-    "uuids": uuids.scan,
-    "hooks": hooks.scan,
-}
+# All 55 scanners in a flat dict
+surfaces_scan = SCANNERS["surfaces"]
+result = surfaces_scan(Path("."))
+
+# Organized by category
+for scanner_name, scan_fn in SCANNER_CATEGORIES["static"].items():
+    result = scan_fn(target)
 ```
 
-### Adding New Scanners
+### SCANNER_MANIFEST.yaml
 
-1. Create scanner module: `scanners/new_scanner.py`
-2. Implement `scan(target: Path) -> dict` function
-3. Register in `scanners/__init__.py`:
-   ```python
-   from . import new_scanner
-   SCANNERS["new_scanner"] = new_scanner.scan
-   ```
-4. Update this README with scanner documentation
+Each category directory contains a manifest that registers its scanners:
+
+```yaml
+category: static
+description: "Filesystem analysis scanners - no runtime dependencies"
+scanners:
+  - name: surfaces
+    file: surfaces.py
+    function: scan
+    description: "Scans for contract surfaces (.contract.yaml)"
+  - name: docs
+    file: docs.py
+    function: scan
+    description: "Scans for documentation files"
+```
 
 ---
 
-## 🚀 Usage
+## Adding a New Scanner
 
-### From CLI
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for the step-by-step guide. Quick summary:
+
+1. Create `omni/scanners/<category>/my_scanner.py` with a `scan()` function
+2. Add entry to `omni/scanners/<category>/SCANNER_MANIFEST.yaml`
+3. Add tests in `tests/test_scanners/`
+4. Update the category README
+5. Run `omni introspect` to verify zero drift
+
+---
+
+## All 55 Scanners at a Glance
+
+### 📁 Static (9)
+| Scanner       | Description                          |
+| :------------ | :----------------------------------- |
+| surfaces      | Contract surfaces (`.contract.yaml`) |
+| docs          | Documentation files                  |
+| deps          | Dependency files                     |
+| contracts     | Contract definitions                 |
+| tools         | Tool definitions                     |
+| uuids         | UUID references                      |
+| hooks         | Git hooks                            |
+| events        | Event schema definitions             |
+| imports_check | Config-driven import bans            |
+
+### 🏗️ Architecture (4)
+| Scanner    | Description                        |
+| :--------- | :--------------------------------- |
+| compliance | Structural standards enforcement   |
+| coupling   | Dependency graph / cycle detection |
+| drift      | Registry vs. filesystem comparison |
+| imports    | Import boundary violations         |
+
+### 🔎 Discovery (8)
+| Scanner              | Description               |
+| :------------------- | :------------------------ |
+| project              | Project registry builder  |
+| cli                  | CLI command discovery     |
+| cores                | Core file discovery       |
+| canon                | CodeCraft canon scanning  |
+| census               | File census by dimension  |
+| mcp_server_discovery | MCP server discovery      |
+| archive_scanner      | Archive contents scanning |
+| cli_edge_scanner     | CLI edge case detection   |
+
+### 🌐 Polyglot (4)
+| Scanner         | Description                       |
+| :-------------- | :-------------------------------- |
+| package_scanner | Python projects                   |
+| node_scanner    | Node.js projects                  |
+| rust_scanner    | Rust projects                     |
+| generic         | Go, Java, .NET, Docker, Terraform |
+
+### 📚 Library (6)
+| Scanner       | Description                    |
+| :------------ | :----------------------------- |
+| library       | Document census with freshness |
+| cohesion      | Folder cohesion analysis       |
+| content       | Deep content analysis          |
+| graph         | Knowledge graph extraction     |
+| empty_folders | Empty structure detection      |
+| rituals       | CodeCraft ritual detection     |
+
+### 🔀 Git (5)
+| Scanner        | Description                  |
+| :------------- | :--------------------------- |
+| git            | Repository status            |
+| velocity       | Development velocity metrics |
+| commit_history | Complete commit history      |
+| pr_telemetry   | PR health / drift detection  |
+| git_util       | Shared git utilities         |
+
+### 🔍 Search (3)
+| Scanner        | Description                       |
+| :------------- | :-------------------------------- |
+| pattern_search | Regex/pattern search with context |
+| file_search    | File discovery by name/pattern    |
+| text_search    | Full-text search                  |
+
+### 🗄️ DB (1)
+| Scanner | Description                     |
+| :------ | :------------------------------ |
+| generic | Config-driven database scanning |
+
+### 🛡️ Health (6) — *Federation-Exclusive*
+| Scanner           | Description             |
+| :---------------- | :---------------------- |
+| federation_health | Federation Heart status |
+| cmp_health        | CMP database health     |
+| pillar_health     | Pillar status           |
+| station_health    | Station runtime status  |
+| tunnel_status     | Tunnel connectivity     |
+| system            | System-level health     |
+
+### 🗃️ Database (5) — *Federation-Exclusive*
+| Scanner           | Description                       |
+| :---------------- | :-------------------------------- |
+| cmp_agents        | CMP agents table                  |
+| cmp_artifacts     | CMP artifacts table               |
+| cmp_conversations | CMP conversations table           |
+| cmp_entities      | Entity mentions (knowledge graph) |
+| cmp_projects      | CMP projects table                |
+
+### ⚓ Fleet (1) — *Federation-Exclusive*
+| Scanner | Description               |
+| :------ | :------------------------ |
+| fleet   | Fleet registry generation |
+
+### 🔥 Phoenix (3) — *Federation-Exclusive*
+| Scanner               | Description               |
+| :-------------------- | :------------------------ |
+| archive_scanner       | Git repos in zip archives |
+| orphan_detector       | Orphaned commit detection |
+| temporal_gap_analyzer | Resurrection intelligence |
+
+---
+
+## Drift Detection
+
+Run `omni introspect` to check for documentation drift:
+
 ```bash
-# Run single scanner
-omni scan --scanners=surfaces .
-
-# Run multiple scanners
-omni scan --scanners=surfaces,events,contracts .
-
-# Run all scanners on target
-omni scan /path/to/project
-
-# Global scan (all projects in registry)
-omni scan --all
+omni introspect
 ```
 
-### From Code
-```python
-from pathlib import Path
-from omni.core.scanners import SCANNERS
-
-# Run specific scanner
-target = Path("/path/to/project")
-results = SCANNERS["surfaces"](target)
-
-# Run all scanners
-all_results = {
-    name: scanner(target)
-    for name, scanner in SCANNERS.items()
-}
-```
+This compares the scanner README documentation against the actual scanner registry and reports:
+- **Undocumented scanners**: Exist in manifest but not in README
+- **Missing files**: Referenced in manifest but file not found
 
 ---
 
-## 📊 Output Format
-
-All scanners return a dict with these standard keys:
-
-```python
-{
-    "count": 5,           # Number of findings
-    "items": [...],       # List of found items
-    "metadata": {         # Scanner-specific metadata
-        "scanner": "surfaces",
-        "version": "0.5.0"
-    }
-}
-```
-
-### Optional Keys
-- `found`: list - Alternative to `items` (backward compat)
-- `summary`: dict - Summary statistics
-- `errors`: list - Errors encountered during scan
-
----
-
-## 🔄 Integration with Core
-
-Scanners integrate with core modules:
-
-- **`surfaces.py`** → Referenced by `registry_events.py` for event mapping
-- **`uuids.py`** → Used by `provenance.py` for UUID auditing
-- **`deps.py`** → Referenced by `requirements.py` for dependency analysis
-- **`events.py`** → Feeds `registry_events.py` for event registry generation
-
----
-
-## 🎯 Roadmap: Planned Scanners
-
-### Phase 2: Constitutional Intelligence ✅ COMPLETE
-- ✅ Runtime health scanners (federation_health, station_health, cmp_health, pillar_health, tunnel_status)
-
-### Phase 3: Gamified Backend (PENDING)
-- `quest_tracker.py` - Parses "Quest" markers in markdown
-- `achievement_calculator.py` - Metrics for visual badges
-
-### Phase 4: Polyglot Expansion ✅ COMPLETE
-- ✅ `node_scanner.py` - Deep package.json analysis for Federation JS deps
-- ✅ `rust_scanner.py` - Deep Cargo.toml analysis for crate usage
-
-### Future Enhancements
-- `python_scanner.py` - Deep requirements.txt/pyproject.toml analysis (beyond basic deps)
-- `docker_scanner.py` - Dockerfile and docker-compose.yml analysis
-- `kubernetes_scanner.py` - K8s manifest analysis
-
----
-
-## 📊 Runtime Health Scanners (New in v0.6.0)
-
-### `federation_health.py` 🧠
-- **Category:** Runtime Health
-- **Purpose:** Queries FederationCore for system health
-- **Detects:**
-  - FederationCore status (ACTIVE/SECURE/ERROR)
-  - Individual pillar health (5 pillars)
-  - Component availability
-- **Integration:** Uses `federation_heart.core.federation_core.FederationCore`
-- **Output:** Core status + pillar breakdown
-- **Use Case:** System-wide health check
-
----
-
-### `station_health.py` 🛰️
-- **Category:** Runtime Health
-- **Purpose:** Queries Station Nexus for pipeline health
-- **Detects:**
-  - Nexus connectivity (ONLINE/OFFLINE)
-  - Registered stations
-  - Pipeline status (SENSE→DECIDE→ACT)
-  - Nonary Station (SENSE)
-  - Living State Station (DECIDE)
-  - CodeCraft Station (ACT)
-- **Integration:** Uses `federation_heart.clients.connectivity.StationClient`
-- **Output:** Nexus status + pipeline metrics
-- **Use Case:** Pipeline health monitoring, station diagnostics
-
----
-
-### `cmp_health.py` 💾
-- **Category:** Runtime Health
-- **Purpose:** Queries Conversation Memory Project health
-- **Detects:**
-  - PostgreSQL database connectivity
-  - Schema version (37 tables, 277 columns)
-  - MCP server availability (cmp-memory, cmp-knowledge-graph)
-  - Memory lane status (9 lanes: episodic, semantic, procedural, etc.)
-  - Total conversation count
-- **Integration:** Uses `conversation-memory-project/mcp_servers/cmp_config.py`
-- **Output:** Database health + memory lane status
-- **Use Case:** Memory substrate monitoring, CMP diagnostics
-
----
-
-### `pillar_health.py` 🏛️
-- **Category:** Runtime Health
-- **Purpose:** Queries all Federation Heart pillars
-- **Detects:**
-  - Cartography Pillar (WHERE)
-  - Connectivity Pillar (HOW to connect)
-  - Constitution Pillar (WHAT rules)
-  - Foundry Pillar (HOW to make)
-  - Consciousness Pillar (WHO - if available)
-- **Health Grades:**
-  - EXCELLENT: All pillars active
-  - GOOD: All but one active
-  - DEGRADED: Half or more active
-  - CRITICAL: At least one active
-  - OFFLINE: None active
-- **Integration:** Uses all pillar classes from `federation_heart.pillars`
-- **Output:** Per-pillar detailed status + overall health grade
-- **Use Case:** Federation Heart diagnostics, component health matrix
-
----
-
-### `tunnel_status.py` 🌐
-- **Category:** Runtime Health
-- **Purpose:** Queries active network tunnels
-- **Detects:**
-  - Cloudflare tunnels (`cloudflared tunnel list`)
-  - ngrok tunnels (via localhost:4040 API)
-  - Federation-managed tunnels (TunnelManager)
-  - Active endpoints and URLs
-- **Integration:** Uses `federation_heart.clients.connectivity.TunnelManager`
-- **Output:** Tunnel inventory with endpoints
-- **Use Case:** Network connectivity monitoring, tunnel debugging
-
----
-
-## 🌐 Polyglot Scanners (New in v0.6.0)
-
-### `node_scanner.py` 📦
-- **Category:** Polyglot Analysis
-- **Purpose:** Deep Node.js/JavaScript/TypeScript project analysis
-- **Detects:**
-  - Package name, version, description
-  - Production dependencies
-  - Development dependencies
-  - Peer dependencies
-  - Scripts (build, dev, test, etc.)
-  - Entry points (main, module, types, bin)
-  - Federation markers:
-    - `federation_keywords` - SERAPHINA/Federation in keywords
-    - `mcp_dependency` - MCP packages
-    - `nextjs_project` - Next.js detected
-    - `react_project` - React detected
-    - `typescript_enabled` - TypeScript enabled
-- **Output:** Comprehensive package.json analysis
-- **Use Case:** JavaScript ecosystem mapping, Federation UI project discovery
-
----
-
-### `rust_scanner.py` 🦀
-- **Category:** Polyglot Analysis
-- **Purpose:** Deep Rust crate analysis
-- **Detects:**
-  - Crate name, version, edition, description
-  - Production dependencies
-  - Development dependencies
-  - Build dependencies
-  - Features
-  - Workspace members
-  - Federation markers:
-    - `codecraft_vm` - CodeCraft native VM
-    - `quantum_enabled` - Q# quantum interop
-    - `mcp_integration` - MCP integration
-    - `async_runtime` - Tokio/async-std
-    - `wasm_target` - WebAssembly target
-- **Output:** Comprehensive Cargo.toml analysis
-- **Use Case:** Rust ecosystem mapping, CodeCraft VM monitoring
-
----
-
-## 🎯 Roadmap: Completed Scanners
-
-### Phase 4: Runtime Health (COMPLETE) ✅
-- ✅ `federation_health.py` - Queries FederationCore.status()
-- ✅ `station_health.py` - Queries station nexus pipeline status
-- ✅ `cmp_health.py` - Queries memory substrate health
-- ✅ `pillar_health.py` - Queries all 5 pillars for status
-- ✅ `tunnel_status.py` - Queries active Cloudflare/ngrok tunnels
-
-### Phase 4: Polyglot Expansion (COMPLETE) ✅
-- ✅ `node_scanner.py` - Deep package.json analysis for Federation JS deps
-- ✅ `rust_scanner.py` - Deep Cargo.toml analysis for crate usage
-
----
-
-## 🛡️ Safety & Performance
-
-### Safety Defaults
-- **Read-only:** Scanners never modify source files
-- **Non-destructive:** Results written to `artifacts/omni/`
-- **Sensitive paths:** Auto-exclude `.env`, `.git`, credentials
-
-### Performance Optimization
-- **Configurable excludes:** `omni.yml` exclusion patterns
-- **Depth limits:** Prevent excessive traversal
-- **Lazy evaluation:** Only scan when needed
-- **Parallel scanning:** Future enhancement
-
----
-
-## 📚 Dependencies
-
-**Required:**
-- Python 3.8+
-- pathlib (stdlib)
-
-**Optional:**
-- None (scanners use stdlib only for maximum portability)
-
----
-
-## 🎓 Best Practices
-
-### Scanner Design
-1. **Single Responsibility:** Each scanner does ONE thing well
-2. **Consistent Interface:** Always return `{count, items, metadata}`
-3. **Error Handling:** Catch exceptions, never crash the scan
-4. **Performance:** Skip deep node_modules, build dirs
-5. **Documentation:** Update this README when adding scanners
-
-### Pattern Matching
-- Use regex for code patterns
-- Make patterns configurable via `omni.yml`
-- Provide sensible defaults
-
-### Output Quality
-- Include metadata for traceability
-- Provide counts for quick summaries
-- Structure items for easy parsing
-
----
-
-*Last Updated: January 28, 2026 (v0.6.1 + git/fleet/cli/canon scanners)*  
-*Maintained by: The Federation*  
-*Constitutional Authority: Charter V1.2*
+<p align="center">
+  <em>55 instruments. One Eye. Infinite perception.</em><br/>
+  <strong>The Sensorium v0.7.0</strong>
+</p>

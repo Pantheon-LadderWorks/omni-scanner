@@ -66,7 +66,7 @@ def _parse_md_registry(registry_path):
 
     current_section = ""
     # Assuming standard infrastructure root if settings unavailable (legacy mode)
-    workspace_root = r"C:\Users\kryst" 
+    workspace_root = str(settings.get_infrastructure_root())
     
     for line in lines:
         if line.startswith("##"):

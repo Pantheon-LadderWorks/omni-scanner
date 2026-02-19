@@ -30,7 +30,6 @@ MARKDOWN_LINK_PATTERN = r'\[([^\]]+)\]\(([^)]+)\)'
 WIKI_LINK_PATTERN = r'\[\[([^\]]+)\]\]'
 
 # Import patterns
-PYTHON_IMPORT_PATTERN = r'^(?:from\s+([a-zA-Z0-9_.]+)\s+)?import\s+([a-zA-Z0-9_., ]+)'
 JS_IMPORT_PATTERN = r'(?:import|require)\s*(?:\{[^}]+\}\s*from\s*)?[\'"]([^\'"]+)[\'"]'
 TS_IMPORT_TYPE_PATTERN = r'import\s+type\s+\{[^}]+\}\s*from\s*[\'"]([^\'"]+)[\'"]'
 
@@ -80,41 +79,25 @@ def extract_markdown_links(content: str, file_path: Path) -> List[Dict[str, str]
 
 def extract_python_imports(content: str, file_path: Path) -> List[Dict[str, str]]:
     """
-    Extract import statements from Python files.
-    
-    Args:
-        content: File content
-        file_path: Source file path
-    
-    Returns:
-        List of dicts with import info
+    Extract import statements from Python files using AST.
     """
-    imports = []
+    from omni.lib.ast_util import extract_imports
     
-    for line in content.split('\n'):
-        line = line.strip()
-        
-        # Skip comments
-        if line.startswith('#'):
-            continue
-        
-        match = re.match(PYTHON_IMPORT_PATTERN, line)
-        if match:
-            from_module = match.group(1)
-            import_list = match.group(2)
-            
-            # Parse import list
-            modules = [m.strip() for m in import_list.split(',')]
-            
-            for module in modules:
-                imports.append({
-                    'type': 'python_import',
-                    'module': module,
-                    'from': from_module,
-                    'source': str(file_path),
-                })
+    # Use centralized AST parser
+    raw_imports = extract_imports(file_path)
     
-    return imports
+    # Convert to expected graph format
+    formatted_imports = []
+    for imp in raw_imports:
+        formatted_imports.append({
+            'type': 'python_import',
+            'module': imp['module'],
+            'from': None, # ast_util handles from/import unification differently, simplifying here
+            'names': imp['names'],
+            'source': str(file_path),
+            'line': imp['line']
+        })
+    return formatted_imports
 
 
 def extract_js_imports(content: str, file_path: Path) -> List[Dict[str, str]]:

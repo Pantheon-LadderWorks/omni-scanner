@@ -1,6 +1,14 @@
 # Python
 __pycache__/
-*.py[cod]
+*.pyc
+
+# Proprietary/Federation-Specific Clients
+omni/clients/genesis_client.py
+omni/clients/librarian_client.py
+omni/clients/github_ops_client.py
+
+# Proprietary Builders
+omni/builders/codecraft/
 *$py.class
 *.so
 .Python
@@ -10,7 +18,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -26,6 +33,10 @@ venv/
 env/
 .env
 
+# Configuration
+omni/config/settings.py
+
+
 # Editor
 .vscode/
 .idea/
@@ -39,3 +50,29 @@ artifacts/
 omni_governance.egg-info/
 templates/*.tmp
 tests/fixtures/__pycache__/
+
+
+# Custom Scanners (CMP, Stations, Federation, Phoenix)
+omni/scanners/database/
+omni/scanners/fleet/
+omni/scanners/health/
+omni/scanners/phoenix/
+
+# Internal Documentation
+docs/internal/
+docs/plans/
+docs/history/
+.omni/
+.serena/
+
+# Scripts & Requirements
+scripts/
+requirements/
+pyproject.toml
+
+# Sandbox & Local Data
+playground/
+*.db
+*.sqlite3
+omni_repos.json
+projects.yaml

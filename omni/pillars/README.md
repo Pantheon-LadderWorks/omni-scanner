@@ -2,7 +2,7 @@
 
 **Location:** `omni/pillars/`  
 **Purpose:** Large subsystem capabilities and orchestration modules  
-**Version:** 0.6.0
+**Version:** 0.7.0
 
 ---
 
@@ -278,13 +278,13 @@ if not report.valid:
 
 ### Pillar vs Scanner vs Lib
 
-| Aspect | Pillar | Scanner | Lib |
-|--------|--------|---------|-----|
-| **Scope** | Orchestrates workflows | Discovers specific data | Provides utilities |
-| **State** | May be stateful | Usually stateless | Always stateless |
-| **Dependencies** | Can depend on lib + scanners | Can depend on lib | Depends on nothing |
-| **Output** | Complex reports/graphs | Simple finding lists | Return values only |
-| **Examples** | Cartography, Gatekeeper | surfaces, events | io, renderer |
+| Aspect           | Pillar                       | Scanner                 | Lib                |
+| ---------------- | ---------------------------- | ----------------------- | ------------------ |
+| **Scope**        | Orchestrates workflows       | Discovers specific data | Provides utilities |
+| **State**        | May be stateful              | Usually stateless       | Always stateless   |
+| **Dependencies** | Can depend on lib + scanners | Can depend on lib       | Depends on nothing |
+| **Output**       | Complex reports/graphs       | Simple finding lists    | Return values only |
+| **Examples**     | Cartography, Gatekeeper      | surfaces, events        | io, renderer       |
 
 ### Orchestration Pattern
 

@@ -6,12 +6,16 @@ Dynamically loads scanners from subdirectories based on SCANNER_MANIFEST.yaml.
 
 Structure:
   scanners/
-  ├── static/     (filesystem analysis)
-  ├── polyglot/   (language-specific)
-  ├── health/     (runtime health)
-  ├── discovery/  (structure discovery)
-  ├── git/        (git operations)
-  └── fleet/      (fleet generators)
+  ├── architecture/ (coupling & design analysis)
+  ├── discovery/    (project & mcp structure)
+  ├── database/     (generic sql/postgres)
+  ├── git/          (repository operations)
+  ├── health/       (system & runtime health)
+  ├── library/      (content taxonomy)
+  ├── phoenix/      (resurrection & archives)
+  ├── polyglot/     (language-specific analysis)
+  ├── search/       (text & file patterns)
+  └── static/       (filesystem analysis)
 
 Each category has a SCANNER_MANIFEST.yaml that declares available scanners.
 """

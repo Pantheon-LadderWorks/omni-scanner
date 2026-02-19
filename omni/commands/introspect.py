@@ -81,16 +81,12 @@ class OmniIntrospector:
     
     def count_commands(self) -> int:
         """Count available CLI commands."""
-        try:
-            from omni.cli import COMMAND_REGISTRY
-            return len(COMMAND_REGISTRY)
-        except:
-            # Fallback: check if cli.py exists
-            cli_path = self.omni_root / "cli.py"
-            if cli_path.exists():
-                # Count subparsers.add_parser calls (rough estimate)
-                content = cli_path.read_text(encoding='utf-8')
-                return content.count('subparsers.add_parser(')
+        # Check cli.py for command definitions
+        cli_path = self.omni_root / "cli.py"
+        if cli_path.exists():
+            # Count subparsers.add_parser calls (rough estimate)
+            content = cli_path.read_text(encoding='utf-8')
+            return content.count('subparsers.add_parser(')
         return 0
     
     def introspect(self, show_drift: bool = True, show_scanners: bool = True) -> bool:
@@ -168,22 +164,41 @@ class OmniIntrospector:
                 print(f"\n✅ NO DRIFT DETECTED")
                 print("   All scanner manifests match filesystem reality!")
         
-        # 7. Documentation drift check
-        readme_path = self.scanners_root / "README.md"
-        if readme_path.exists():
-            readme_content = readme_path.read_text(encoding='utf-8')
-            
-            # Count documented scanners (lines starting with "### `" in markdown)
-            documented_count = readme_content.count("### `")
-            
-            if documented_count < total_scanners:
-                print(f"\n📚 DOCUMENTATION DRIFT")
-                print("-" * 70)
-                print(f"   README.md documents: {documented_count} scanners")
-                print(f"   Actual scanners:     {total_scanners}")
-                print(f"   Missing docs:        {total_scanners - documented_count} 🚨")
+        # 7. Documentation drift check (scans per-category READMEs)
+        documented_scanners = set()
+        undocumented_scanners = []
+        
+        for category, scanners in filesystem.items():
+            category_readme = self.scanners_root / category / "README.md"
+            if category_readme.exists():
+                try:
+                    readme_text = category_readme.read_text(encoding='utf-8')
+                    for scanner_name in scanners:
+                        # Check if scanner name appears in the category README
+                        if scanner_name in readme_text:
+                            documented_scanners.add(f"{category}/{scanner_name}")
+                        else:
+                            undocumented_scanners.append(f"{category}/{scanner_name}")
+                except Exception:
+                    # If we can't read the README, all scanners in this category are undocumented
+                    for scanner_name in scanners:
+                        undocumented_scanners.append(f"{category}/{scanner_name}")
             else:
-                print(f"\n📚 README.md: UP TO DATE ✅")
+                # No README at all for this category
+                for scanner_name in scanners:
+                    undocumented_scanners.append(f"{category}/{scanner_name}")
+        
+        documented_count = len(documented_scanners)
+        if undocumented_scanners:
+            print(f"\n📚 DOCUMENTATION DRIFT")
+            print("-" * 70)
+            print(f"   Documented scanners:   {documented_count}")
+            print(f"   Actual scanners:       {total_scanners}")
+            print(f"   Undocumented:          {len(undocumented_scanners)} 🚨")
+            for scanner in sorted(undocumented_scanners):
+                print(f"      • {scanner}")
+        else:
+            print(f"\n📚 DOCUMENTATION: {documented_count}/{total_scanners} SCANNERS COVERED ✅")
         
         print(f"\n{'=' * 70}")
         print(f"✨ Introspection complete")

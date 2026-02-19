@@ -48,31 +48,8 @@ class RepoVelocityStats:
     error: Optional[str] = None
 
 
-def _run_git_command(repo_path: Path, command: List[str]) -> Tuple[Optional[str], Optional[str]]:
-    """
-    Run a git command in the repository.
-    
-    Returns:
-        Tuple of (stdout, stderr) or (None, error_message)
-    """
-    try:
-        result = subprocess.run(
-            ['git'] + command,
-            cwd=repo_path,
-            capture_output=True,
-            text=True,
-            timeout=30,
-            encoding='utf-8',
-            errors='replace'
-        )
-        if result.returncode == 0:
-            return result.stdout.strip(), None
-        else:
-            return None, result.stderr.strip()
-    except subprocess.TimeoutExpired:
-        return None, "Command timeout"
-    except Exception as e:
-        return None, str(e)
+
+from omni.scanners.git.git_util import run_git_command as _run_git_command
 
 
 def _get_commit_count(repo_path: Path, since: Optional[str] = None) -> int:

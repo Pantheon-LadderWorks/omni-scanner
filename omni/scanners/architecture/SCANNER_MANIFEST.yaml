@@ -5,3 +5,21 @@ scanners:
     file: imports.py
     function: scan
     description: "Scans for import boundary violations (pillar bypass, cross-area)"
+
+  - name: drift
+    file: drift.py
+    function: scan
+    description: "Compares Registry (Map) vs Filesystem (Territory) to detect ghosts and rogues."
+
+  - name: coupling
+    file: coupling.py
+    function: scan
+    description: "Builds dependency graph to detect cycles and god modules."
+
+  - name: compliance
+    file: compliance.py
+    function: scan
+    description: "Enforces structural standards (Required Files) per architectural area."
+
+
+

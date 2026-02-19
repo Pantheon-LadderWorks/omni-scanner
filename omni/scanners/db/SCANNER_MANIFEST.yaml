@@ -1,0 +1,7 @@
+category: database
+description: "Generic configuration-driven database scanners"
+scanners:
+  - name: generic
+    file: generic.py
+    function: scan
+    description: "Scans databases defined in omni/config/db/*.yaml"

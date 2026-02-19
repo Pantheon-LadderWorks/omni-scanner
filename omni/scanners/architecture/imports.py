@@ -73,32 +73,8 @@ CONTRACT_REFS = {
 # AST IMPORT EXTRACTOR
 # ============================================================================
 
-def _extract_imports(filepath: Path) -> List[Dict[str, Any]]:
-    """Parse a Python file and extract all import statements."""
-    try:
-        source = filepath.read_text(encoding="utf-8", errors="replace")
-        tree = ast.parse(source, filename=str(filepath))
-    except (SyntaxError, UnicodeDecodeError):
-        return []
 
-    imports = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and node.module:
-            imports.append({
-                "line": node.lineno,
-                "module": node.module,
-                "names": [alias.name for alias in node.names],
-                "type": "from",
-            })
-        elif isinstance(node, ast.Import):
-            for alias in node.names:
-                imports.append({
-                    "line": node.lineno,
-                    "module": alias.name,
-                    "names": [alias.name],
-                    "type": "import",
-                })
-    return imports
+from omni.lib.ast_util import extract_imports
 
 
 # ============================================================================
@@ -309,7 +285,7 @@ def scan(target: Path, **options) -> Dict[str, Any]:
             continue
 
         files_scanned += 1
-        imports = _extract_imports(py_file)
+        imports = extract_imports(py_file)
         caller_area = _classify_area(py_file, infra_root)
         caller_sub = _get_sub_area(py_file, infra_root)
         rel_path = _safe_relative(py_file, infra_root)
@@ -431,7 +407,7 @@ def _audit_settings_shims(infra_root: Path, skip_dirs: set) -> Dict[str, Any]:
         if rel_path.startswith("federation_heart/"):
             continue
         
-        imports = _extract_imports(settings_file)
+        imports = extract_imports(settings_file)
         
         pillar_imports = [i for i in imports 
                          if i["module"].startswith("federation_heart.pillars")]

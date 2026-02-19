@@ -15,3 +15,8 @@ scanners:
     file: commit_history.py
     function: scan
     description: "Complete commit history phoenix resurrection evidence"
+
+  - name: pr-telemetry
+    file: pr_telemetry.py
+    function: scan
+    description: "PR Telemetry Scanner (The Telepath) - Health and Drift Detection"
