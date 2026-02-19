@@ -1,0 +1,23 @@
+[
+    {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        "name": "io.github.pantheon-ladderworks/omni-scanner",
+        "description": "Codebase observatory with 56+ scanners for git health, architecture, and documentation.",
+        "repository": {
+            "url": "https://github.com/Pantheon-LadderWorks/omni-scanner",
+            "source": "github"
+        },
+        "homepage": "https://pantheonladderworks.com",
+        "version": "0.7.0",
+        "packages": [
+            {
+                "registryType": "pypi",
+                "identifier": "omni-scanner",
+                "version": "0.7.0",
+                "transport": {
+                    "type": "stdio"
+                }
+            }
+        ]
+    }
+]

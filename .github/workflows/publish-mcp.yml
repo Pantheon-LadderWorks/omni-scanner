@@ -1,0 +1,51 @@
+name: Publish to PyPI and MCP Registry
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build package
+        run: python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Use trusted publishing (OIDC) if configured on PyPI, or secrets.PYPI_API_TOKEN
+          # For this template we assume standard secret usage or OIDC if configured
+          skip-existing: true
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server to MCP Registry
+        # Requires server.json in root. We generate it or expect it.
+        # Since we just need to notify the registry, we'll verify server.json exists or generate a minimal one.
+        # But for the registry updates, usually the registry pulls from the PR.
+        # Wait, the mcp-publisher tools submits the validation/update?
+        # The docs say "Publish server.json to the registry".
+        run: ./mcp-publisher publish

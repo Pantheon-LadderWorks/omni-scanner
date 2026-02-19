@@ -4,6 +4,8 @@
 
 **The Federation Governance Tricorder** — A modular, extensible observation engine that scans, maps, and guards codebases at galactic scale.
 
+<!-- mcp-name: io.github.pantheon-ladderworks/omni-scanner -->
+
 > *"Never trust documentation, trust reality."* — ACE
 
 Omni is a Python-powered **passive observation platform** that discovers the truth about your code. It doesn't modify files or break builds — it sees, maps, and reports. Think of it as a **tricorder for your codebase**: point it at any directory and it reveals structure, dependencies, health, drift, and compliance in seconds.
