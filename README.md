@@ -4,7 +4,7 @@
 
 **The Federation Governance Tricorder** — A modular, extensible observation engine that scans, maps, and guards codebases at galactic scale.
 
-<!-- mcp-name: io.github.pantheon-ladderworks/omni-scanner -->
+<!-- mcp-name: io.github.Pantheon-LadderWorks/omni-scanner -->
 
 > *"Never trust documentation, trust reality."* — ACE
 
@@ -32,8 +32,11 @@ Omni is a Python-powered **passive observation platform** that discovers the tru
 
 ### Install
 ```bash
-# From the omni directory
-pip install -e .
+# Recommended: Install from PyPI
+pip install omni-governance
+
+# Or install from source:
+# pip install -e .
 ```
 
 ### Your First Scan
@@ -191,6 +194,13 @@ The integration is handled by a **single shim** (`omni/config/settings.py`) that
 
 Omni includes a Model Context Protocol (MCP) server that exposes all 55 scanners as AI-callable tools. Any MCP-compatible AI assistant can invoke Omni's scanners programmatically.
 
+### Quick Start (npx)
+The absolute easiest way to use the MCP Server is via npx (requires Node.js):
+```bash
+npx -y @modelcontextprotocol/inspector mcp-server-omni-governance
+```
+
+### Run from Source
 ```bash
 # The MCP server auto-discovers all registered scanners
 python -m mcp_server.omni_mcp_server

@@ -17,6 +17,16 @@ Before you start, ensure you have:
 
 ## 🚀 Step-by-Step Installation
 
+### 0. The Easy Way (PyPI)
+If you just want to use Omni without modifying the code, you can install it directly from PyPI. This is the **recommended** path for most users:
+
+```bash
+pip install omni-governance
+```
+That's it! You can skip directly to **Step 4. Verify Installation**.
+
+If you want to modify the code or contribute to Omni, follow the source installation steps below.
+
 ### 1. Clone the Repository
 Get the code onto your machine.
 
